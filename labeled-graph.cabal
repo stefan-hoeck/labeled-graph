@@ -15,12 +15,14 @@ cabal-version:       >=1.20
 library
   exposed-modules:     Data.Graph.Simple.Vertex
                        Data.Graph.Simple.Edge
+                       Data.Graph.Simple.Graph
 
   other-modules:       Data.Graph.Simple.Util
 
   build-depends:       base         == 4.7.*
                      , containers   == 0.5.5.*
                      , vector       == 0.10.12.*
+                     , safe == 0.3.*
 
   -- hs-source-dirs:      
   default-language:    Haskell2010

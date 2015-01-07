@@ -8,7 +8,7 @@ module Data.Graph.Simple.Edge (
 , edgesNull, filterEdges
 
 ,  Edges, unEdges, emptyEdges, edgesFromList, normalizeEdges
-,  completeEdges
+,  completeEdges, chainEdges
 ) where
 
 import Control.Monad ((>>=))
@@ -23,8 +23,7 @@ import Data.List (zip, null, length, filter)
 import Data.Maybe (Maybe(..))
 import Data.Monoid ((<>))
 import Data.Ord (Ord, (<))
-import GHC.Enum (succ, pred)
-import GHC.Num ((+), (*))
+import GHC.Num ((+), (*), (-))
 import GHC.Real (div, mod)
 import Prelude (error)
 import Text.Show (Show, show)
@@ -111,9 +110,12 @@ emptyEdges = Edges []
 edgesFromList ∷ [Edge] → Edges
 edgesFromList = Edges . sortedUnique
 
-completeEdges ∷ Vertex → Edges
-completeEdges n = Edges $ [unsafeEdge x y | y ← [succ minVertex .. n],
-                                            x ← [minVertex .. pred y]]
+completeEdges ∷ Int → Edges
+completeEdges n = Edges $ [x<->y | y ← [1..n-1], x ← [0..y-1]]
+
+chainEdges ∷ Int → Edges
+chainEdges n = Edges $ [x<->(x+1) | x ← [0..n-2]]
+
 
 -- | Takes a list of arbitrary edges and transforms them
 --   to link vertices from 1 to n where n is the total
