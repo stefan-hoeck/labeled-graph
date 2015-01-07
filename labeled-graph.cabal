@@ -14,8 +14,9 @@ cabal-version:       >=1.20
 
 library
   exposed-modules:     Data.Graph.Simple.Vertex
+                       Data.Graph.Simple.Edge
 
-  -- other-modules:       
+  other-modules:       Data.Graph.Simple.Util
 
   build-depends:       base         == 4.7.*
                      , containers   == 0.5.5.*
