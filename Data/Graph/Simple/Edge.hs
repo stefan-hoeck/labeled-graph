@@ -110,11 +110,11 @@ emptyEdges = Edges []
 edgesFromList ∷ [Edge] → Edges
 edgesFromList = Edges . sortedUnique
 
-completeEdges ∷ Int → Edges
-completeEdges n = Edges $ [x<->y | y ← [1..n-1], x ← [0..y-1]]
+completeEdges ∷ Int → [Edge]
+completeEdges n = [x<->y | y ← [1..n-1], x ← [0..y-1]]
 
-chainEdges ∷ Int → Edges
-chainEdges n = Edges $ [x<->(x+1) | x ← [0..n-2]]
+chainEdges ∷ Int → [Edge]
+chainEdges n = [x<->(x+1) | x ← [0..n-2]]
 
 
 -- | Takes a list of arbitrary edges and transforms them
@@ -123,7 +123,7 @@ chainEdges n = Edges $ [x<->(x+1) | x ← [0..n-2]]
 normalizeEdges ∷ Edges → Edges
 normalizeEdges (Edges es) = Edges $ fmap (transformEdge (map M.!)) es
   where map = M.fromList $ zip vs [minVertex..]
-        vs  = sortedUnique es >>= edgeVertices
+        vs  = sortedUnique (es >>= edgeVertices)
 
 edgesSize ∷ Edges → Int
 edgesSize = length . unEdges

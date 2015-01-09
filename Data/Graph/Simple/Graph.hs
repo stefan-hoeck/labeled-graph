@@ -3,7 +3,7 @@ module Data.Graph.Simple.Graph (
   Graph, edges, edgeList, fromList
 
 -- * Graph constructors
-, null, empty, fromEdges, complete, chain, complement
+, null, empty, complete, chain, complement
 
 -- * Graph properties
 , order, size, isNull, isEmpty, isTrivial
@@ -15,26 +15,31 @@ module Data.Graph.Simple.Graph (
 
 -- * Edge properties
 , isPendantEdge, edgeIn
+
+-- * Subgraphs
+-- , inducedSubgraph, filterVertices
 ) where
 
-import Control.Monad ((>>), return)
+import Control.Monad ((>>=), (>>), return)
 import Control.Monad.ST (runST)
 import Data.Bool (Bool(..), (&&), (||), not)
 import Data.Eq ((==))
-import Data.Foldable (forM_, maximum, elem)
+import Data.Foldable (forM_, elem)
 import Data.Function ((.), ($))
 import Data.Functor (fmap)
 import Data.Graph.Simple.Vertex
 import Data.Graph.Simple.Edge
 import Data.Graph.Simple.Util
 import Data.Int (Int)
-import Data.List (sort, length, unlines)
+import Data.List (sort, length, unlines, filter)
 import Data.Maybe (Maybe(..))
-import GHC.Num ((+), (-))
+import Data.Ord ((<))
+import GHC.Num ((-))
 import Text.Show (Show, show)
 import Safe.Foldable (minimumMay, maximumMay)
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed.Mutable as MVU
+import qualified Data.List as L
 
 -- ** Graphs ** --
 --
@@ -43,7 +48,7 @@ type ConList = V.Vector Vertices
   
 data Graph = Graph {
   conList ∷ ConList
-, edges   ∷ Edges
+, edges   ∷ [Edge]
 }
   
 instance Show Graph where
@@ -60,33 +65,37 @@ null = empty 0
 
 -- | An empty graph (a graph without edges) with n vertices
 empty ∷ Int → Graph
-empty n = Graph (V.replicate n []) emptyEdges
+empty n = Graph (V.replicate n []) []
 
 
 -- | Builds a graph from a list of edges
-fromList ∷ [Edge] → Graph
-fromList = fromEdges . edgesFromList
+fromList ∷ Int → [Edge] → Graph
+fromList o = fromSortedList o . sortedUnique
 
--- | Builds a graph from a sorted list of edges containing
---   no dublicates.
-fromEdges ∷ Edges → Graph
-fromEdges es = case unEdges es of
-    []  → null
-    es' → Graph (edgesToConList es') es
- 
- 
+
+-- | Builds a graph from a list of edges
+fromSortedList ∷ Int → [Edge] → Graph
+fromSortedList o es = Graph (edgesToConList o es) es
+
+fromConList ∷ ConList → Graph
+fromConList cl = Graph cl calcEs
+    where calcEs = [0 .. V.length cl - 1] >>= atV . vertex
+          atV v  = let ns = cl V.! (unVertex v)
+                   in fmap (v `edge`) $ filter (v <) ns
+
 complete ∷ Int → Graph
-complete = fromEdges . completeEdges
+complete o = fromSortedList o $ completeEdges o
+
  
 chain ∷ Int → Graph
-chain = fromEdges . chainEdges
+chain o = fromSortedList o $ chainEdges o
  
  
 complement ∷ Graph → Graph
-complement g = fromEdges 
-             . filterEdges (not . edgeIn g) 
-             . completeEdges
-             $ order g
+complement g = let o = order g
+               in fromSortedList o 
+                  . filter (not . edgeIn g) 
+                  $ completeEdges o
  
 -- * Basic Graph properties * --
 --
@@ -98,7 +107,7 @@ isNull = (0 ==) . order
 
 -- | True if the graph has no edges (size == 0)
 isEmpty ∷ Graph → Bool
-isEmpty = edgesNull . edges
+isEmpty = L.null . edges
 
 
 -- | True if the graph has only one vertex
@@ -113,7 +122,7 @@ order =  V.length . conList
 
 -- | The size (number of edges) of a graph
 size ∷ Graph → Int
-size = edgesSize . edges
+size = length . edges
 
 
 vertices ∷ Graph → Vertices
@@ -186,7 +195,7 @@ dfs f a g v = runST $ do
 --
 
 edgeList ∷ Graph → [Edge]
-edgeList = unEdges . edges
+edgeList = edges
 
 
 isPendantEdge ∷ Graph → Edge → Bool
@@ -198,26 +207,38 @@ edgeIn g e = adjacent g (edgeX e) (edgeY e)
 
 
 
--- -- * Subgraphs * --
--- --
+-- * Subgraphs * --
+--
+
+-- inducedSubgraph ∷ Vertices → Graph → Graph
+-- inducedSubgraph vs g = fromEdges newOrder
+--                      . normalizeEdges 
+--                      . filterEdges inV 
+--                      $ edges g
 -- 
--- --inducedSubgraph ∷ Graph → Vertices → Graph
+--   where inV e    = map UV.! (edgeXInt e) && map UV.! (edgeYInt e)
+--         newOrder = length vs
+--         map      = runST $ do
+--                      map' ← MVU.replicate (order g) False
+--                      forM_ vs $ \v → unsafeWriteVU map' v True
+--                      UV.unsafeFreeze map'
+--        
 -- 
--- 
+-- filterVertices ∷ (Vertex → Bool) → Graph → Graph
+-- filterVertices p g = inducedSubgraph (filter p $ vertices g) g
+
 -- * Helper functions * --
 --
 
-edgesToConList ∷ [Edge] → ConList
-edgesToConList es = runST $ do
-  let maxV = maximum $ fmap edgeYInt es
-
-  v ← V.unsafeThaw $ V.replicate (maxV + 1) []
+edgesToConList ∷ Int → [Edge] → ConList
+edgesToConList o es = runST $ do
+  v ← V.unsafeThaw $ V.replicate o []
 
   let setEdge e = let (x, y) = (edgeX e, edgeY e)
                   in unsafeModV v x (y :) >>
                      unsafeModV v y (x :)
 
   forM_ es setEdge
-  forM_ [0..maxV] $ \i → unsafeMod v i sort
+  forM_ [0.. o-1] $ \i → unsafeMod v i sort
 
   V.unsafeFreeze v
