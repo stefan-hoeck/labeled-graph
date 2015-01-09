@@ -19,7 +19,7 @@ module Data.Graph.Simple.Graph (
 
 import Control.Monad ((>>), return)
 import Control.Monad.ST (runST)
-import Data.Bool (Bool(..), (||), not)
+import Data.Bool (Bool(..), (&&), (||), not)
 import Data.Eq ((==))
 import Data.Foldable (forM_, maximum, elem)
 import Data.Function ((.), ($))
@@ -190,8 +190,8 @@ edgeList = unEdges . edges
 
 
 isPendantEdge ∷ Graph → Edge → Bool
-isPendantEdge g e = isPendant g (edgeX e) ||
-                    isPendant g (edgeY e)
+isPendantEdge g e = edgeIn g e &&
+                    (isPendant g (edgeX e) || isPendant g (edgeY e))
 
 edgeIn ∷ Graph → Edge → Bool
 edgeIn g e = adjacent g (edgeX e) (edgeY e)
