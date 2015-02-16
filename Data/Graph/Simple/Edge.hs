@@ -7,7 +7,7 @@ module Data.Graph.Simple.Edge (
 , edgesAdjacent, edgesSize
 , edgesNull, filterEdges
 
-,  Edges, unEdges, emptyEdges, edgesFromList, normalizeEdges
+,  Edges, unsafeEdges, unEdges, emptyEdges, edgesFromList, normalizeEdges
 ,  completeEdges, chainEdges
 ) where
 
@@ -17,7 +17,7 @@ import Data.Eq (Eq, (==))
 import Data.Function ((.), ($))
 import Data.Functor (fmap)
 import Data.Graph.Simple.Util (sortedUnique)
-import Data.Graph.Simple.Vertex (Vertex, Vertices, unVertex, maxVertex, vertex, minVertex)
+import Data.Graph.Simple.Vertex (Vertex, unVertex, maxVertex, vertex, minVertex)
 import Data.Int (Int)
 import Data.List (zip, null, length, filter)
 import Data.Maybe (Maybe(..))
@@ -80,14 +80,20 @@ edgeX = vertex . (`div` vmod) . unEdge
 edgeY ∷ Edge → Vertex
 edgeY = vertex . (`mod` vmod) . unEdge
 
+
+-- | Returns the smaller of the two vertices connected
+--   by an edge ans an Int.
 edgeXInt ∷ Edge → Int
 edgeXInt = unVertex . edgeX
 
+
+-- | Returns the larger of the two vertices connected
+--   by an edge ans an Int.
 edgeYInt ∷ Edge → Int
 edgeYInt = unVertex . edgeY
 
 
-edgeVertices ∷ Edge → Vertices
+edgeVertices ∷ Edge → [Vertex]
 edgeVertices e = [edgeX e, edgeY e]
 
 
@@ -104,17 +110,22 @@ edgesAdjacent e1 e2 = connects e2 (edgeX e1) || connects e2 (edgeY e1)
 newtype Edges = Edges { unEdges ∷ [Edge] }
   deriving (Show, Eq, Ord)
 
+-- | Wraps a list of edges without sorting or checking
+--   for dublicates
+unsafeEdges ∷ [Edge] → Edges
+unsafeEdges = Edges
+
 emptyEdges ∷ Edges
 emptyEdges = Edges []
 
 edgesFromList ∷ [Edge] → Edges
 edgesFromList = Edges . sortedUnique
 
-completeEdges ∷ Int → [Edge]
-completeEdges n = [x<->y | y ← [1..n-1], x ← [0..y-1]]
+completeEdges ∷ Int → Edges
+completeEdges n = Edges [x<->y | y ← [1..n-1], x ← [0..y-1]]
 
-chainEdges ∷ Int → [Edge]
-chainEdges n = [x<->(x+1) | x ← [0..n-2]]
+chainEdges ∷ Int → Edges
+chainEdges n = Edges [x<->(x+1) | x ← [0..n-2]]
 
 
 -- | Takes a list of arbitrary edges and transforms them

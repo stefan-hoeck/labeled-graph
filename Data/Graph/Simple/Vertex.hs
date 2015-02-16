@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Data.Graph.Simple.Vertex (
-  Vertex, Vertices, unVertex
+  Vertex, unVertex
 
 , vertex, vertexMay
 , minVAsInt, maxVAsInt, minVertex, maxVertex
@@ -9,7 +9,7 @@ module Data.Graph.Simple.Vertex (
 
 import Data.Bool (Bool, (&&), otherwise)
 import Data.Eq (Eq)
-import Data.Function (($), (.))
+import Data.Function (($), (.), id)
 import Data.Int (Int)
 import Data.Maybe (Maybe(..))
 import Data.Monoid ((<>))
@@ -17,12 +17,10 @@ import Data.Ord (Ord, (<=))
 import Data.String (String)
 import GHC.Enum (Enum, toEnum, fromEnum, Bounded, minBound, maxBound)
 import GHC.Float (sqrt, Double)
-import GHC.Num ((-))
+import GHC.Num (Num(..))
 import GHC.Real (floor, fromIntegral)
 import Prelude (error)
 import Text.Show (Show, show)
-
-type Vertices = [Vertex]
 
 -- | Newtype representing vertices in a graph
 newtype Vertex = Vertex { unVertex ∷ Int }
@@ -38,6 +36,14 @@ instance Bounded Vertex where
 instance Enum Vertex where
   fromEnum = unVertex
   toEnum   = vertex
+
+instance Num Vertex where
+  (Vertex a) + (Vertex b) = vertex $ a + b
+  (Vertex a) * (Vertex b) = vertex $ a * b
+  abs      = id
+  negate   = id
+  signum _ = Vertex 1
+  fromInteger = vertex . fromInteger
 
 vertexMay ∷ Int → Maybe Vertex
 vertexMay v | isValidVertex v = Just $ Vertex v
