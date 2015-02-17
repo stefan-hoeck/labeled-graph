@@ -11,22 +11,9 @@ module Data.Graph.Simple.Edge (
 ,  completeEdges, chainEdges
 ) where
 
-import Control.Monad ((>>=))
-import Data.Bool (Bool, otherwise, (||))
-import Data.Eq (Eq, (==))
-import Data.Function ((.), ($))
-import Data.Functor (fmap)
 import Data.Graph.Simple.Util (sortedUnique)
 import Data.Graph.Simple.Vertex (Vertex, unVertex, maxVertex, vertex, minVertex)
-import Data.Int (Int)
-import Data.List (zip, null, length, filter)
-import Data.Maybe (Maybe(..))
 import Data.Monoid ((<>))
-import Data.Ord (Ord, (<))
-import GHC.Num ((+), (*), (-))
-import GHC.Real (div, mod)
-import Prelude (error)
-import Text.Show (Show, show)
 import qualified Data.Map as M
 
 -- ** Edge ** --
@@ -132,9 +119,9 @@ chainEdges n = Edges [x<->(x+1) | x ← [0..n-2]]
 --   to link vertices from 1 to n where n is the total
 --   number of distinct vertices found in the list.
 normalizeEdges ∷ Edges → Edges
-normalizeEdges (Edges es) = Edges $ fmap (transformEdge (map M.!)) es
-  where map = M.fromList $ zip vs [minVertex..]
-        vs  = sortedUnique (es >>= edgeVertices)
+normalizeEdges (Edges es) = Edges $ fmap (transformEdge (map' M.!)) es
+  where map' = M.fromList $ zip vs [minVertex..]
+        vs   = sortedUnique (es >>= edgeVertices)
 
 edgesSize ∷ Edges → Int
 edgesSize = length . unEdges

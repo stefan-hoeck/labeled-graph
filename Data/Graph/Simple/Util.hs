@@ -6,14 +6,9 @@ module Data.Graph.Simple.Util (
 , unsafeModU, unsafeMod, unsafeModV, unsafeModVU
 ) where
 
-import Control.Monad ((>>=))
 import Control.Monad.ST (ST)
-import Data.Eq (Eq, (==))
-import Data.Function ((.))
 import Data.Graph.Simple.Vertex (Vertex, unVertex)
-import Data.Int (Int)
-import Data.List (reverse, sort)
-import Data.Ord (Ord)
+import Data.List (sort)
 import qualified Data.Vector.Mutable as MV
 import qualified Data.Vector.Unboxed.Mutable as MVU
 

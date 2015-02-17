@@ -7,26 +7,27 @@ module Data.Graph.Simple.LGraph (
 , minDegree, maxDegree
 , vlabel, elabel
 
+, mapE, mapV
+
 , module Data.Graph.Simple.Vertex
 , module Data.Graph.Simple.Edge
 ) where
 
-import Data.Bool (Bool)
-import Data.Maybe
-import Data.Functor (fmap)
-import Data.Function (($), (.))
 import Data.Graph.Simple.Edge
 import Data.Graph.Simple.Vertex
-import Data.Int (Int)
 import qualified Data.Map as M
 import qualified Data.Graph.Simple.Graph as G
 import qualified Data.Vector as V
+import Prelude hiding (null)
 
 data LGraph e v = LGraph {
   graph   ∷ G.Graph
 , vlabels ∷ V.Vector v
 , elabels ∷ M.Map Edge e
 }
+
+instance Functor (LGraph e) where
+  fmap = mapV
 
 fromGraph ∷ (Vertex → v) → (Edge → e) → G.Graph → LGraph e v
 fromGraph fv fe g = LGraph g vs es 
@@ -51,6 +52,7 @@ vlabel g v = (vlabels g) V.! (unVertex v)
 -- | Extract the label at a given edge
 elabel ∷ LGraph e v → Edge → Maybe e
 elabel g e = M.lookup e (elabels g)
+
 
 -- * Basic Graph properties * --
 --
@@ -90,3 +92,19 @@ minDegree = G.minDegree . graph
 
 maxDegree ∷ LGraph e v → Maybe Int
 maxDegree = G.maxDegree . graph
+
+
+-- * Modifying Graphs * --
+--
+
+mapE ∷ (e → e') → LGraph e v → LGraph e' v
+mapE f (LGraph g vs es) = LGraph g vs (fmap f es)
+
+mapV ∷ (v → v') → LGraph e v → LGraph e v'
+mapV f (LGraph g vs es) = LGraph g (fmap f vs) es
+
+
+filterE ∷ (e → Bool) → LGraph e v → LGraph e v
+filterE p (LGraph g vs es) = LGraph g' vs es'
+    where g'  = G.fromEdges (G.order g) $ unsafeEdges (M.keys es')
+          es' = M.filter p es

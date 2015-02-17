@@ -17,32 +17,24 @@ module Data.Graph.Simple.Graph (
 , isPendantEdge, edgeIn
 
 -- * Subgraphs
--- , inducedSubgraph, filterVertices
+, filterE, filterV, inducedSubgraph
 
 , module Data.Graph.Simple.Vertex
 , module Data.Graph.Simple.Edge
 ) where
 
-import Control.Monad ((>>=), (>>), return)
 import Control.Monad.ST (runST)
-import Data.Bool (Bool(..), (&&), (||), not)
-import Data.Eq ((==))
-import Data.Foldable (forM_, elem)
-import Data.Function ((.), ($))
-import Data.Functor (fmap)
-import Data.Graph.Simple.Vertex
+import Data.Foldable (forM_)
 import Data.Graph.Simple.Edge
 import Data.Graph.Simple.Util
-import Data.Int (Int)
-import Data.List (sort, length, unlines, filter)
-import Data.Maybe (Maybe(..))
-import Data.Ord ((<))
-import GHC.Num ((-), (+))
-import Text.Show (Show, show)
+import Data.Graph.Simple.Vertex
+import Data.List (sort)
+import Prelude hiding (null)
 import Safe.Foldable (minimumMay, maximumMay)
+
+import qualified Data.BitSet.Word as BS
+import qualified Data.Map as M
 import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed.Mutable as MVU
-import qualified Data.List as L
 
 -- ** Graphs ** --
 --
@@ -216,30 +208,49 @@ isPendantEdge ∷ Graph → Edge → Bool
 isPendantEdge g e = edgeIn g e &&
                     (isPendant g (edgeX e) || isPendant g (edgeY e))
 
+
 edgeIn ∷ Graph → Edge → Bool
 edgeIn g e = adjacent g (edgeX e) (edgeY e)
 
 
 
--- -- * Subgraphs * --
--- --
--- 
--- -- inducedSubgraph ∷ [Vertex] → Graph → Graph
--- -- inducedSubgraph vs g = fromEdges newOrder
--- --                      . normalizeEdges 
--- --                      . filterEdges inV 
--- --                      $ edges g
--- -- 
--- --   where inV e    = map UV.! (edgeXInt e) && map UV.! (edgeYInt e)
--- --         newOrder = length vs
--- --         map      = runST $ do
--- --                      map' ← MVU.replicate (order g) False
--- --                      forM_ vs $ \v → unsafeWriteVU map' v True
--- --                      UV.unsafeFreeze map'
--- --        
--- -- 
--- -- filterVertices ∷ (Vertex → Bool) → Graph → Graph
--- -- filterVertices p g = inducedSubgraph (filter p $ vertices g) g
+-- * Subgraphs * --
+--
+
+-- | Returns a subgraph of the given graph, keeping
+--   only the vertices given and the edges involving
+--   those vertices.
+--
+--   Note that the numbering of vertices will be adjusted
+--   in the new graph
+inducedSubgraph ∷ [Vertex] → Graph → Graph
+inducedSubgraph vs = let bs = BS.fromList vs
+                     in filterV (`BS.member` bs)
+
+
+-- | Returns a subgraph of the given graph, keeping
+--   only the vertices fulfilling the given predicate
+--
+--   Note that the numbering of vertices will be adjusted
+--   in the new graph
+filterV ∷ (Vertex → Bool) → Graph → Graph
+filterV p g      = fromEdges (length vs) es
+    where es     = unsafeEdges . concatMap adjE $ edgeList g
+
+          vs     = filter p (vertices g)
+
+          vmap   = M.fromAscList $ vs `zip` [0..]
+
+          adjV v = vmap M.! v
+
+          adjE e = case (edgeX e, edgeY e) of
+                     (x, y) | p x && p y → [unsafeEdge (adjV x) (adjV y)]
+                            | otherwise  → []
+
+
+filterE ∷ (Edge → Bool) → Graph → Graph
+filterE p g = fromEdges (order g) . filterEdges p $ edges g
+
 
 -- * Helper functions * --
 

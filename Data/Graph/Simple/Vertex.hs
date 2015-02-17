@@ -7,20 +7,7 @@ module Data.Graph.Simple.Vertex (
 , minVAsInt, maxVAsInt, minVertex, maxVertex
 ) where
 
-import Data.Bool (Bool, (&&), otherwise)
-import Data.Eq (Eq)
-import Data.Function (($), (.), id)
-import Data.Int (Int)
-import Data.Maybe (Maybe(..))
 import Data.Monoid ((<>))
-import Data.Ord (Ord, (<=))
-import Data.String (String)
-import GHC.Enum (Enum, toEnum, fromEnum, Bounded, minBound, maxBound)
-import GHC.Float (sqrt, Double)
-import GHC.Num (Num(..))
-import GHC.Real (floor, fromIntegral)
-import Prelude (error)
-import Text.Show (Show, show)
 
 -- | Newtype representing vertices in a graph
 newtype Vertex = Vertex { unVertex ∷ Int }
