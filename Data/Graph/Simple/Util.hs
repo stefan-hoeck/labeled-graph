@@ -6,7 +6,7 @@ module Data.Graph.Simple.Util (
 , unsafeModU, unsafeMod, unsafeModV, unsafeModVU
 ) where
 
-import Control.Monad.ST (ST)
+import Control.Monad.ST (ST, runST)
 import Data.Graph.Simple.Vertex (Vertex, unVertex)
 import Data.List (sort)
 import qualified Data.Vector.Mutable as MV

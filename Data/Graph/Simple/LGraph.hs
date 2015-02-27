@@ -9,6 +9,8 @@ module Data.Graph.Simple.LGraph (
 
 , mapE, mapV
 
+, filterE
+
 , module Data.Graph.Simple.Vertex
 , module Data.Graph.Simple.Edge
 ) where

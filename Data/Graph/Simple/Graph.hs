@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+
 module Data.Graph.Simple.Graph (
 -- * Types and data types
    Graph, edges, edgeList
@@ -19,22 +21,30 @@ module Data.Graph.Simple.Graph (
 -- * Subgraphs
 , filterE, filterV, inducedSubgraph
 
+-- * Searches
+, dfs, reachable, connectedSubgraphs
+
+, SetM(..), runG, visited, visit
+
 , module Data.Graph.Simple.Vertex
 , module Data.Graph.Simple.Edge
 ) where
 
-import Control.Monad.ST (runST)
-import Data.Foldable (forM_)
+import Control.Applicative (Applicative(..))
+import Control.Monad.ST (ST, runST)
+import Data.Foldable (forM_, toList, foldMap)
 import Data.Graph.Simple.Edge
 import Data.Graph.Simple.Util
 import Data.Graph.Simple.Vertex
 import Data.List (sort)
+import Data.Tree (Tree(..), Forest)
 import Prelude hiding (null)
 import Safe.Foldable (minimumMay, maximumMay)
 
 import qualified Data.BitSet.Word as BS
 import qualified Data.Map as M
 import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed.Mutable as MVU
 
 -- ** Graphs ** --
 --
@@ -47,7 +57,10 @@ data Graph = Graph {
 }
   
 instance Show Graph where
-  show = unlines . fmap show . edgeList
+  show g =     "fromList "
+            ++ show (order g)
+            ++ " "
+            ++ show (edgeList g)
 
 
 -- * Graph Construction * --
@@ -74,12 +87,12 @@ fromEdges o es = Graph (edgesToConList o es') es
     where es'  = unEdges es
 
 
-fromConList ∷ ConList → Graph
-fromConList cl = Graph cl calcEs
-    where vmax'  = vertex $ V.length cl
-          calcEs = unsafeEdges $ [0 .. vmax'] >>= atV
-          atV v  = let ns = cl V.! (unVertex v)
-                   in fmap (v `edge`) $ filter (v <) ns
+-- fromConList ∷ ConList → Graph
+-- fromConList cl = Graph cl calcEs
+--     where vmax'  = vertex $ V.length cl
+--           calcEs = unsafeEdges $ [0 .. vmax'] >>= atV
+--           atV v  = let ns = cl V.! (unVertex v)
+--                    in fmap (v `edge`) $ filter (v <) ns
 
 
 -- | Returns the complete graph (edges between every pair of vertices)
@@ -180,24 +193,37 @@ isIsolate g v = (degree g v) == 0
 -- | The vertices bound via a single edge to a given vertex v
 neighbors ∷ Graph → Vertex → [Vertex]
 neighbors g v = (conList g) V.! (unVertex v)
+
+connectedSubgraphs ∷ Graph → [Graph]
+connectedSubgraphs g =
+  fmap (inducedSubgraph g . toList) $ dfs g (vertices g)
                 
 
--- reachable ∷ Graph → Vertex → [Vertex]
--- reachable = dfs (:) []
--- 
--- dfs ∷ (Vertex → a → a) → a → Graph → Vertex → a
--- dfs f a g v = runST $ do
---     vs ← MVU.replicate (order g) False
---     run a [v] vs
--- 
---   where run a' []    _  = return a'
---         run a' (h:t) vs = do visited ← unsafeReadVU vs h
---                              if visited
---                                then run a' t vs
---                                else do unsafeWriteVU vs h True
---                                        a'' ← run (f h a') (neighbors g h) vs
---                                        run a'' t vs
--- 
+reachable ∷ Graph → Vertex → [Vertex]
+reachable g v = foldMap toList $ dfs g [v]
+
+-- | Depth first search implementation similar to
+--   the one found in Data.Graph of the containers
+--   package.
+dfs ∷ Graph → [Vertex] → Forest Vertex
+dfs g vs = prune (order g) (map (generate g) vs)
+
+generate ∷ Graph → Vertex → Tree Vertex
+generate g v  = Node v $ map (generate g) (neighbors g v)
+
+prune ∷ Int → Forest Vertex → Forest Vertex
+prune n ts = run n (chop ts)
+
+chop ∷ Forest Vertex → SetM s (Forest Vertex)
+chop []       = return []
+chop (Node v ts : us) = do vis ← visited v
+                           if vis 
+                           then chop us
+                           else do visit v
+                                   as ← chop ts
+                                   bs ← chop us
+                                   return (Node v as : bs)
+
 -- * Edge properties *
 
 edgeList ∷ Graph → [Edge]
@@ -223,9 +249,9 @@ edgeIn g e = adjacent g (edgeX e) (edgeY e)
 --
 --   Note that the numbering of vertices will be adjusted
 --   in the new graph
-inducedSubgraph ∷ [Vertex] → Graph → Graph
-inducedSubgraph vs = let bs = BS.fromList vs
-                     in filterV (`BS.member` bs)
+inducedSubgraph ∷ Graph → [Vertex] → Graph
+inducedSubgraph g vs = let bs = BS.fromList vs
+                     in filterV (`BS.member` bs) g
 
 
 -- | Returns a subgraph of the given graph, keeping
@@ -266,3 +292,34 @@ edgesToConList o es = runST $ do
   forM_ [0.. o-1] $ \i → unsafeMod v i sort
 
   V.unsafeFreeze v
+
+
+-- Used to mark visited vertices in graph algorithms
+newtype SetM s a = SetM { runSetM ∷ MVU.MVector s Bool → ST s a }
+
+instance Functor (SetM s) where
+  f `fmap` SetM v = SetM $ fmap f . v
+
+instance Applicative (SetM s) where
+  pure              = SetM . const . return
+  SetM f <*> SetM a = SetM $ \v → f v <*> a v
+
+instance Monad (SetM s) where
+  return       = pure
+  SetM v >>= f = SetM $ \s → do x ← v s
+                                runSetM (f x) s
+
+runG ∷ Graph → (forall s . SetM s a) → a
+runG g = run $ order g
+
+
+run ∷ Int → (forall s . SetM s a) → a
+run n act = runST $ do v ← MVU.replicate n False
+                       runSetM act v
+
+
+visited ∷ Vertex → SetM s Bool
+visited v = SetM $ \bs → MVU.read bs (unVertex v) 
+
+visit ∷ Vertex → SetM s ()
+visit v = SetM $ \bs → MVU.write bs (unVertex v) True
