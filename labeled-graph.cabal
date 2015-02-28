@@ -32,10 +32,11 @@ library
   other-modules:       Data.Graph.Simple.Util
 
   build-depends:       base         == 4.7.*
-                     , containers   == 0.5.5.*
-                     , vector       == 0.10.12.*
-                     , safe         == 0.3.*
                      , bitset       == 1.4.*
+                     , containers   == 0.5.5.*
+                     , deepseq      == 1.3.0.*
+                     , safe         == 0.3.*
+                     , vector       == 0.10.12.*
 
   default-language:    Haskell2010
 

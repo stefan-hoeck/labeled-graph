@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Data.Graph.Simple.LGraph (
   LGraph
 
@@ -15,21 +17,37 @@ module Data.Graph.Simple.LGraph (
 , module Data.Graph.Simple.Edge
 ) where
 
+import Control.DeepSeq (NFData)
+import Data.Foldable (Foldable, foldMap, foldr)
 import Data.Graph.Simple.Edge
 import Data.Graph.Simple.Vertex
+import Data.Traversable (Traversable, traverse)
+import GHC.Generics (Generic)
+import Prelude hiding (null, foldr)
+
 import qualified Data.Map as M
 import qualified Data.Graph.Simple.Graph as G
 import qualified Data.Vector as V
-import Prelude hiding (null)
 
 data LGraph e v = LGraph {
   graph   ∷ G.Graph
 , vlabels ∷ V.Vector v
 , elabels ∷ M.Map Edge e
-}
+} deriving (Eq, Generic)
+
+instance (NFData e, NFData v) ⇒ NFData (LGraph e v)
 
 instance Functor (LGraph e) where
   fmap = mapV
+
+instance Foldable (LGraph e) where
+  foldMap f = foldMap f . vlabels
+  foldr f b = foldr f b . vlabels
+
+instance Traversable (LGraph e) where
+  traverse f (LGraph g vs es) = let vs' = traverse f vs
+                                in fmap (\x → LGraph g x es) vs'
+
 
 fromGraph ∷ (Vertex → v) → (Edge → e) → G.Graph → LGraph e v
 fromGraph fv fe g = LGraph g vs es 

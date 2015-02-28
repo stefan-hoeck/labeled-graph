@@ -1,4 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Data.Graph.Simple.Graph (
 -- * Types and data types
@@ -31,6 +32,7 @@ module Data.Graph.Simple.Graph (
 ) where
 
 import Control.Applicative (Applicative(..))
+import Control.DeepSeq (NFData)
 import Control.Monad.ST (ST, runST)
 import Data.Foldable (forM_, toList, foldMap)
 import Data.Graph.Simple.Edge
@@ -38,6 +40,7 @@ import Data.Graph.Simple.Util
 import Data.Graph.Simple.Vertex
 import Data.List (sort)
 import Data.Tree (Tree(..), Forest)
+import GHC.Generics (Generic)
 import Prelude hiding (null)
 import Safe.Foldable (minimumMay, maximumMay)
 
@@ -54,7 +57,9 @@ type ConList = V.Vector [Vertex]
 data Graph = Graph {
   conList ∷ ConList
 , edges   ∷ Edges
-}
+} deriving (Eq, Generic)
+
+instance NFData Graph
   
 instance Show Graph where
   show g =     "fromList "
