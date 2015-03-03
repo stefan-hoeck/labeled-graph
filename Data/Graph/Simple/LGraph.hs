@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Data.Graph.Simple.LGraph (
-  LGraph
+  LGraph(graph, vlabels, elabels)
 
-, fromGraph, null, empty
+, fromLists, fromGraph, null, empty
 
 , isNull, isEmpty, isTrivial, order, size, vertices
 , minDegree, maxDegree
@@ -53,6 +53,10 @@ fromGraph ∷ (Vertex → v) → (Edge → e) → G.Graph → LGraph e v
 fromGraph fv fe g = LGraph g vs es 
     where vs = V.generate (G.order g) (fv . vertex)
           es = M.fromList $ fmap (\e → (e, fe e)) (G.edgeList g)
+
+fromLists ∷ [v] → [(Edge, e)] → LGraph e v
+fromLists vs es = LGraph g (V.fromList vs) (M.fromList es)
+    where g = G.fromList (length vs) (fmap fst es)
 
 -- | The null graph
 null ∷ LGraph v e
