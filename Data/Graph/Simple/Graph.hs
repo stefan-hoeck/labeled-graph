@@ -25,15 +25,12 @@ module Data.Graph.Simple.Graph (
 -- * Searches
 , dfs, reachable, connectedSubgraphs
 
-, SetM(..), runG, visited, visit
-
 , module Data.Graph.Simple.Vertex
 , module Data.Graph.Simple.Edge
 ) where
 
-import Control.Applicative (Applicative(..))
 import Control.DeepSeq (NFData)
-import Control.Monad.ST (ST, runST)
+import Control.Monad.ST (runST)
 import Data.Foldable (forM_, toList, foldMap)
 import Data.Graph.Simple.Edge
 import Data.Graph.Simple.Util
@@ -47,7 +44,7 @@ import Safe.Foldable (minimumMay, maximumMay)
 import qualified Data.BitSet.Word as BS
 import qualified Data.Map as M
 import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed.Mutable as MVU
+import qualified Data.Vector.Unboxed as VU
 
 -- ** Graphs ** --
 --
@@ -217,9 +214,9 @@ generate ∷ Graph → Vertex → Tree Vertex
 generate g v  = Node v $ map (generate g) (neighbors g v)
 
 prune ∷ Int → Forest Vertex → Forest Vertex
-prune n ts = run n (chop ts)
+prune n ts = runM n False (chop ts)
 
-chop ∷ Forest Vertex → SetM s (Forest Vertex)
+chop ∷ Forest Vertex → SetM s Bool (Forest Vertex)
 chop []       = return []
 chop (Node v ts : us) = do vis ← visited v
                            if vis 
@@ -229,6 +226,17 @@ chop (Node v ts : us) = do vis ← visited v
                                    bs ← chop us
                                    return (Node v as : bs)
 
+markCycles ∷ [Vertex] → Tree Vertex → SetM s Int ()
+markCycles ps (Node v ts) = do vis ← getM v
+                               if vis > 0
+                               then case takeWhile (v /=) ps of
+                                      []     → return ()
+                                      (_:[]) → return ()
+                                      ps'    → forM_ (v:ps') $ modM (+1)
+                               else do setM 1 v
+                                       let ps' = v:ps
+                                       forM_ ts $ markCycles ps'
+--                   
 -- * Edge properties *
 
 edgeList ∷ Graph → [Edge]
@@ -297,34 +305,3 @@ edgesToConList o es = runST $ do
   forM_ [0.. o-1] $ \i → unsafeMod v i sort
 
   V.unsafeFreeze v
-
-
--- Used to mark visited vertices in graph algorithms
-newtype SetM s a = SetM { runSetM ∷ MVU.MVector s Bool → ST s a }
-
-instance Functor (SetM s) where
-  f `fmap` SetM v = SetM $ fmap f . v
-
-instance Applicative (SetM s) where
-  pure              = SetM . const . return
-  SetM f <*> SetM a = SetM $ \v → f v <*> a v
-
-instance Monad (SetM s) where
-  return       = pure
-  SetM v >>= f = SetM $ \s → do x ← v s
-                                runSetM (f x) s
-
-runG ∷ Graph → (forall s . SetM s a) → a
-runG g = run $ order g
-
-
-run ∷ Int → (forall s . SetM s a) → a
-run n act = runST $ do v ← MVU.replicate n False
-                       runSetM act v
-
-
-visited ∷ Vertex → SetM s Bool
-visited v = SetM $ \bs → MVU.read bs (unVertex v) 
-
-visit ∷ Vertex → SetM s ()
-visit v = SetM $ \bs → MVU.write bs (unVertex v) True

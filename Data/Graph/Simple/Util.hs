@@ -1,16 +1,23 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module Data.Graph.Simple.Util (
   unique, sortedUnique
 
 , unsafeReadV, unsafeReadVU
 , unsafeWriteV, unsafeWriteVU
 , unsafeModU, unsafeMod, unsafeModV, unsafeModVU
+
+, SetM(..), runM, runMV, setM, getM, modM, visit, visited
 ) where
 
+import Control.Applicative (Applicative(..))
 import Control.Monad.ST (ST, runST)
 import Data.Graph.Simple.Vertex (Vertex, unVertex)
 import Data.List (sort)
 import qualified Data.Vector.Mutable as MV
 import qualified Data.Vector.Unboxed.Mutable as MVU
+import qualified Data.Vector.Unboxed as VU
 
 -- | Sorts a list and removes duplicates
 sortedUnique ∷ Ord a ⇒ [a] → [a]
@@ -64,3 +71,50 @@ unsafeWriteV v i a = MV.unsafeWrite v (unVertex i) a
 {-# INLINE unsafeWriteVU #-}
 unsafeWriteVU ∷ MVU.Unbox a ⇒ MVU.MVector s a → Vertex → a → ST s ()
 unsafeWriteVU v i a = MVU.unsafeWrite v (unVertex i) a
+
+
+-- Used to mark or count visited vertices in graph algorithms
+newtype SetM s u a = SetM { runSetM ∷ MVU.MVector s u → ST s a }
+
+instance MVU.Unbox u ⇒ Functor (SetM s u) where
+  f `fmap` SetM v = SetM $ fmap f . v
+
+instance MVU.Unbox u ⇒ Applicative (SetM s u) where
+  pure              = SetM . const . return
+  SetM f <*> SetM a = SetM $ \v → f v <*> a v
+
+instance MVU.Unbox u ⇒ Monad (SetM s u) where
+  return       = pure
+  SetM v >>= f = SetM $ \s → do x ← v s
+                                runSetM (f x) s
+
+{-# INLINE runM #-}
+runM ∷ MVU.Unbox u ⇒ Int → u → (forall s . SetM s u a) → a
+runM n ini act = runST $ do v ← MVU.replicate n ini
+                            runSetM act v
+
+{-# INLINE runMV #-}
+runMV ∷ MVU.Unbox u ⇒ Int → u → (forall s . SetM s u ()) → VU.Vector u
+runMV n ini act = runST $ do v ← MVU.replicate n ini
+                             runSetM act v
+                             VU.unsafeFreeze v
+
+{-# INLINE getM #-}
+getM ∷ MVU.Unbox u ⇒ Vertex → SetM s u u
+getM v = SetM $ \us → unsafeReadVU us v
+
+{-# INLINE setM #-}
+setM ∷ MVU.Unbox u ⇒ u → Vertex → SetM s u ()
+setM v u = SetM $ \us → unsafeWriteVU us u v
+
+{-# INLINE modM #-}
+modM ∷ MVU.Unbox u ⇒ (u → u) → Vertex → SetM s u ()
+modM f v = SetM $ \us → unsafeModVU us v f
+
+{-# INLINE visited #-}
+visited ∷ Vertex → SetM s Bool Bool
+visited = getM
+
+{-# INLINE visit #-}
+visit ∷ Vertex → SetM s Bool ()
+visit v = setM True v
