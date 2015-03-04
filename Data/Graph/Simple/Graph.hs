@@ -232,7 +232,8 @@ markCycles ps (Node v ts) = do vis ← getM v
                                then case takeWhile (v /=) ps of
                                       []     → return ()
                                       (_:[]) → return ()
-                                      ps'    → forM_ (v:ps') $ modM (+1)
+                                      ps'    → forM_ (v:ps') $ setM 2
+
                                else do setM 1 v
                                        let ps' = v:ps
                                        forM_ ts $ markCycles ps'
