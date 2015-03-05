@@ -20,13 +20,14 @@ module Data.Graph.Simple.Graph (
 , isPendantEdge, edgeIn
 
 -- * Subgraphs
-, filterE, filterV, inducedSubgraph
+, filterE, filterV, inducedSubgraph, connectedSubgraphs
+, isConnected
 
 -- * Cycles
 , cyclicVertices
 
 -- * Searches
-, dfs, reachable, connectedSubgraphs
+, dfs, bfs, reachable
 
 -- * Pretty printing
 , pretty, prettyShow
@@ -211,6 +212,9 @@ connectedSubgraphs g =
 reachable ∷ Graph → Vertex → [Vertex]
 reachable g v = foldMap toList $ dfs g [v]
 
+isConnected ∷ Graph → Bool
+isConnected g = (length $ reachable g 0) == order g
+
 -- | Depth first search implementation similar to
 --   the one found in Data.Graph of the containers
 --   package.
@@ -252,6 +256,21 @@ markCycles ps (Node v ts : us) = do vis ← getM v
     where markV c (h:t) cs | v == h    = when (c > 1) (forM_ cs $ setM 2)
                            | otherwise = markV (c+1) t (h:cs)
           markV _ []    _              = return ()
+
+bfs ∷ Graph → Vertex → [[Vertex]]
+bfs g v = runM (order g) False $ bfs' [v]
+    where bfs' []      = return []
+          bfs' vs      = do vs'  ← prune' vs
+                            vs'' ← bfs' (vs' >>= neighbors g)
+                            return $ vs' : vs''
+
+          prune' []    = return []
+          prune' (h:t) = do vis ← visited h
+                            if vis 
+                              then prune' t
+                              else do visit h
+                                      t' ← prune' t
+                                      return $ h:t'
                             
 --                   
 -- * Edge properties *

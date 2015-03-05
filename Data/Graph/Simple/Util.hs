@@ -8,7 +8,7 @@ module Data.Graph.Simple.Util (
 , unsafeWriteV, unsafeWriteVU
 , unsafeModU, unsafeMod, unsafeModV, unsafeModVU
 
-, SetM(..), runM, runMV, setM, getM, modM, visit, visited
+, SetM(..), runM, runMV, setM, getM, modM, visit, visited, notVisited
 ) where
 
 import Control.Applicative (Applicative(..))
@@ -120,6 +120,10 @@ modM f v = SetM $ \us → unsafeModVU us v f
 {-# INLINE visited #-}
 visited ∷ Vertex → SetM s Bool Bool
 visited = getM
+
+{-# INLINE notVisited #-}
+notVisited ∷ Vertex → SetM s Bool Bool
+notVisited = fmap not . visited
 
 {-# INLINE visit #-}
 visit ∷ Vertex → SetM s Bool ()
