@@ -25,6 +25,9 @@ module Data.Graph.Simple.Graph (
 -- * Searches
 , dfs, reachable, connectedSubgraphs
 
+-- * Pretty printing
+, pretty, prettyShow
+
 , SetM(..), runG, visited, visit
 
 , module Data.Graph.Simple.Vertex
@@ -38,7 +41,7 @@ import Data.Foldable (forM_, toList, foldMap)
 import Data.Graph.Simple.Edge
 import Data.Graph.Simple.Util
 import Data.Graph.Simple.Vertex
-import Data.List (sort)
+import Data.List (sort, intercalate)
 import Data.Tree (Tree(..), Forest)
 import GHC.Generics (Generic)
 import Prelude hiding (null)
@@ -281,6 +284,20 @@ filterV p g      = fromEdges (length vs) es
 
 filterE ∷ (Edge → Bool) → Graph → Graph
 filterE p g = fromEdges (order g) . filterEdges p $ edges g
+
+
+-- * Graph Visualisation * --
+--
+pretty ∷ (Vertex → String) → (Edge → String) → Graph → String
+pretty fv fe g = intercalate "\n" $ zipWith (++) elbls vlbls
+
+  where elbls = rightPad ' ' $ fmap fe (edgeList g) ++ eadd
+        vlbls = rightPad ' ' $ fmap (("   " ++) . fv) (vertices g) ++ vadd
+        eadd  = replicate (order g - size g) ""
+        vadd  = replicate (size g - order g) ""
+
+prettyShow ∷ Graph → String
+prettyShow = pretty show show
 
 
 -- * Helper functions * --

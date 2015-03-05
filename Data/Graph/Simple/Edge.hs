@@ -109,7 +109,7 @@ edgesFromList ∷ [Edge] → Edges
 edgesFromList = Edges . sortedUnique
 
 completeEdges ∷ Int → Edges
-completeEdges n = Edges [x<->y | y ← [1..n-1], x ← [0..y-1]]
+completeEdges n = Edges [x<->y | x ← [0..n-1], y ← [x+1..n-1]]
 
 chainEdges ∷ Int → Edges
 chainEdges n = Edges [x<->(x+1) | x ← [0..n-2]]
