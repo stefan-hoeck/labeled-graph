@@ -13,6 +13,9 @@ module Data.Graph.Simple.LGraph (
 
 , filterE
 
+-- * Pretty printing
+, pretty, prettyShow
+
 , module Data.Graph.Simple.Vertex
 , module Data.Graph.Simple.Edge
 ) where
@@ -21,6 +24,7 @@ import Control.DeepSeq (NFData)
 import Data.Foldable (Foldable, foldMap, foldr)
 import Data.Graph.Simple.Edge
 import Data.Graph.Simple.Vertex
+import Data.Maybe (fromJust)
 import Data.Traversable (Traversable, traverse)
 import GHC.Generics (Generic)
 import Prelude hiding (null, foldr)
@@ -33,7 +37,7 @@ data LGraph e v = LGraph {
   graph   ∷ G.Graph
 , vlabels ∷ V.Vector v
 , elabels ∷ M.Map Edge e
-} deriving (Eq, Generic)
+} deriving (Eq, Show, Generic)
 
 instance (NFData e, NFData v) ⇒ NFData (LGraph e v)
 
@@ -132,3 +136,15 @@ filterE ∷ (e → Bool) → LGraph e v → LGraph e v
 filterE p (LGraph g vs es) = LGraph g' vs es'
     where g'  = G.fromEdges (G.order g) $ unsafeEdges (M.keys es')
           es' = M.filter p es
+
+-- * Pretty Printing * --
+--
+
+pretty ∷ ((Vertex,v) → String) → ((Edge,e) → String) → LGraph e v → String
+pretty fv fe g = G.pretty dispV dispE $ graph g
+    where dispV v = fv (v, vlabel g v)
+          dispE e = fe (e, fromJust $ elabel g e)
+
+prettyShow ∷ (Show e, Show v) ⇒ LGraph e v → String
+prettyShow = pretty disp disp
+    where disp (v,vl) = show v ++ ": " ++ show vl

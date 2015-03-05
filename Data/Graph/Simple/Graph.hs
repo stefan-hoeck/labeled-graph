@@ -22,20 +22,27 @@ module Data.Graph.Simple.Graph (
 -- * Subgraphs
 , filterE, filterV, inducedSubgraph
 
+-- * Cycles
+, cyclicVertices
+
 -- * Searches
 , dfs, reachable, connectedSubgraphs
+
+-- * Pretty printing
+, pretty, prettyShow
 
 , module Data.Graph.Simple.Vertex
 , module Data.Graph.Simple.Edge
 ) where
 
 import Control.DeepSeq (NFData)
+import Control.Monad (when)
 import Control.Monad.ST (runST)
 import Data.Foldable (forM_, toList, foldMap)
 import Data.Graph.Simple.Edge
 import Data.Graph.Simple.Util
 import Data.Graph.Simple.Vertex
-import Data.List (sort)
+import Data.List (sort, intercalate)
 import Data.Tree (Tree(..), Forest)
 import GHC.Generics (Generic)
 import Prelude hiding (null)
@@ -44,7 +51,7 @@ import Safe.Foldable (minimumMay, maximumMay)
 import qualified Data.BitSet.Word as BS
 import qualified Data.Map as M
 import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed as VU
+import qualified Data.Vector.Unboxed as UV
 
 -- ** Graphs ** --
 --
@@ -226,17 +233,26 @@ chop (Node v ts : us) = do vis ← visited v
                                    bs ← chop us
                                    return (Node v as : bs)
 
-markCycles ∷ [Vertex] → Tree Vertex → SetM s Int ()
-markCycles ps (Node v ts) = do vis ← getM v
-                               if vis > 0
-                               then case takeWhile (v /=) ps of
-                                      []     → return ()
-                                      (_:[]) → return ()
-                                      ps'    → forM_ (v:ps') $ setM 2
 
-                               else do setM 1 v
-                                       let ps' = v:ps
-                                       forM_ ts $ markCycles ps'
+cyclicVertices ∷ Graph → [Vertex]
+cyclicVertices g = filter isInCycle vs
+    where isInCycle v = (cs UV.! unVertex v) == 2
+          vs          = vertices g
+          cs          = runMV (order g) 0 $ markCycles [] forest
+          forest      = map (generate g) vs
+
+markCycles ∷ [Vertex] → Forest Vertex → SetM s Int ()
+markCycles _ []                = return ()
+markCycles ps (Node v ts : us) = do vis ← getM v
+                                    if vis > 0
+                                      then markV (0 ∷ Int) ps [v]
+                                      else setM 1 v >> markCycles (v:ps) ts
+                                    markCycles ps  us
+
+    where markV c (h:t) cs | v == h    = when (c > 1) (forM_ cs $ setM 2)
+                           | otherwise = markV (c+1) t (h:cs)
+          markV _ []    _              = return ()
+                            
 --                   
 -- * Edge properties *
 
@@ -290,6 +306,20 @@ filterV p g      = fromEdges (length vs) es
 
 filterE ∷ (Edge → Bool) → Graph → Graph
 filterE p g = fromEdges (order g) . filterEdges p $ edges g
+
+
+-- * Graph Visualisation * --
+--
+pretty ∷ (Vertex → String) → (Edge → String) → Graph → String
+pretty fv fe g = intercalate "\n" $ zipWith (++) elbls vlbls
+
+  where elbls = rightPad ' ' $ fmap fe (edgeList g) ++ eadd
+        vlbls = rightPad ' ' $ fmap (("   " ++) . fv) (vertices g) ++ vadd
+        eadd  = replicate (order g - size g) ""
+        vadd  = replicate (size g - order g) ""
+
+prettyShow ∷ Graph → String
+prettyShow = pretty show show
 
 
 -- * Helper functions * --

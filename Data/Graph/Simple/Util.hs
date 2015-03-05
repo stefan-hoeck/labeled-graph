@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Data.Graph.Simple.Util (
-  unique, sortedUnique
+  unique, sortedUnique, rightPad
 
 , unsafeReadV, unsafeReadVU
 , unsafeWriteV, unsafeWriteVU
@@ -30,6 +30,12 @@ unique = run [] where
   run r (x:y:t) | x == y = run r     (y:t)
   run r (h:t)            = run (h:r) t
   run r []               = reverse r
+
+rightPad ∷ a → [[a]] → [[a]]
+rightPad _ [] = []
+rightPad a as = fmap pad as
+    where pad as' = as' ++ replicate (ml - length as') a
+          ml      = maximum $ fmap length as
 
 
 -- | Modfies a value in a mutable array without checking
