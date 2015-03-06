@@ -13,7 +13,7 @@ module Data.Graph.Simple.Graph (
 , minDegree, maxDegree, vertices
 
 -- * Vertex properties
-, degree, neighbors, adjacent, isPendant, isIsolate
+, degree, degrees, neighbors, adjacent, isPendant, isIsolate
 -- , reachable
 
 -- * Edge properties
@@ -161,11 +161,11 @@ vertices g = [minVertex.. vertex $ (order g - 1)]
 
 
 minDegree ∷ Graph → Maybe Int
-minDegree g = minimumMay . fmap (degree g) . vertices $ g
+minDegree = minimumMay . degrees
 
 
 maxDegree ∷ Graph → Maybe Int
-maxDegree g = maximumMay . fmap (degree g) . vertices $ g
+maxDegree = maximumMay . degrees
 
 
 -- * Vertex properties * --
@@ -178,7 +178,7 @@ maxDegree g = maximumMay . fmap (degree g) . vertices $ g
 --   of the second vertex. For molecules, n ≤ 4 in
 --   most cases, so it is de-facto O(1).
 adjacent ∷ Graph → Vertex → Vertex → Bool
-adjacent g v1 v2 = v2 `elem` (neighbors g v1)
+adjacent g v1 v2 = v2 `elem` neighbors g v1
 
 
 -- | The degree of a vertex v.
@@ -191,6 +191,9 @@ adjacent g v1 v2 = v2 `elem` (neighbors g v1)
 degree ∷ Graph → Vertex → Int
 degree g = length . neighbors g
 
+degrees ∷ Graph → [Int]
+degrees g = fmap (degree g) (vertices g)
+
 
 isPendant ∷ Graph → Vertex → Bool
 isPendant g v = (degree g v) == 1
@@ -202,11 +205,10 @@ isIsolate g v = (degree g v) == 0
 
 -- | The vertices bound via a single edge to a given vertex v
 neighbors ∷ Graph → Vertex → [Vertex]
-neighbors g v = (conList g) V.! (unVertex v)
+neighbors g v = conList g V.! unVertex v
 
 connectedSubgraphs ∷ Graph → [Graph]
-connectedSubgraphs g =
-  fmap (inducedSubgraph g . toList) $ dfs g (vertices g)
+connectedSubgraphs g = fmap (inducedSubgraph g . toList) $ dff g
                 
 
 reachable ∷ Graph → Vertex → [Vertex]
@@ -219,23 +221,26 @@ isConnected g = (length $ reachable g 0) == order g
 --   the one found in Data.Graph of the containers
 --   package.
 dfs ∷ Graph → [Vertex] → Forest Vertex
-dfs g vs = prune (order g) (map (generate g) vs)
+dfs g vs = pruneDfs (order g) (map (generate g) vs)
+
+dff ∷ Graph → Forest Vertex
+dff g = dfs g (vertices g)
 
 generate ∷ Graph → Vertex → Tree Vertex
 generate g v  = Node v $ map (generate g) (neighbors g v)
 
-prune ∷ Int → Forest Vertex → Forest Vertex
-prune n ts = runM n False (chop ts)
-
-chop ∷ Forest Vertex → SetM s Bool (Forest Vertex)
-chop []       = return []
-chop (Node v ts : us) = do vis ← visited v
-                           if vis 
-                           then chop us
-                           else do visit v
-                                   as ← chop ts
-                                   bs ← chop us
-                                   return (Node v as : bs)
+pruneDfs ∷ Int → Forest Vertex → Forest Vertex
+pruneDfs n ts = runM n False (chop ts)
+  where  chop []       = return []
+         chop (Node v ts' : us) = do vis ← visited v
+                                     if vis 
+                                     then 
+                                       chop us
+                                     else do 
+                                       visit v
+                                       as ← chop ts'
+                                       bs ← chop us
+                                       return (Node v as : bs)
 
 
 cyclicVertices ∷ Graph → [Vertex]
@@ -280,8 +285,8 @@ edgeList = unEdges . edges
 
 
 isPendantEdge ∷ Graph → Edge → Bool
-isPendantEdge g e = edgeIn g e &&
-                    (isPendant g (edgeX e) || isPendant g (edgeY e))
+isPendantEdge g e = let (x, y) = (edgeX e, edgeY e)
+                    in edgeIn g e && (isPendant g x || isPendant g y)
 
 
 edgeIn ∷ Graph → Edge → Bool
@@ -300,7 +305,7 @@ edgeIn g e = adjacent g (edgeX e) (edgeY e)
 --   in the new graph
 inducedSubgraph ∷ Graph → [Vertex] → Graph
 inducedSubgraph g vs = let bs = BS.fromList vs
-                     in filterV (`BS.member` bs) g
+                       in filterV (`BS.member` bs) g
 
 
 -- | Returns a subgraph of the given graph, keeping
