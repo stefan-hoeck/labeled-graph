@@ -27,7 +27,7 @@ module Data.Graph.Simple.Graph (
 , cyclicVertices
 
 -- * Searches
-, dfs, bfs, reachable
+, dfs, bfs, reachable, paths
 
 -- * Pretty printing
 , pretty, prettyShow
@@ -229,19 +229,6 @@ dff g = dfs g (vertices g)
 generate ∷ Graph → Vertex → Tree Vertex
 generate g v  = Node v $ map (generate g) (neighbors g v)
 
-pruneDfs ∷ Int → Forest Vertex → Forest Vertex
-pruneDfs n ts = runM n False (chop ts)
-  where  chop []       = return []
-         chop (Node v ts' : us) = do vis ← visited v
-                                     if vis 
-                                     then 
-                                       chop us
-                                     else do 
-                                       visit v
-                                       as ← chop ts'
-                                       bs ← chop us
-                                       return (Node v as : bs)
-
 
 cyclicVertices ∷ Graph → [Vertex]
 cyclicVertices g = filter isInCycle vs
@@ -265,17 +252,12 @@ markCycles ps (Node v ts : us) = do vis ← getM v
 bfs ∷ Graph → Vertex → [[Vertex]]
 bfs g v = runM (order g) False $ bfs' [v]
     where bfs' []      = return []
-          bfs' vs      = do vs'  ← prune' vs
+          bfs' vs      = do vs'  ← pruneBfs vs
                             vs'' ← bfs' (vs' >>= neighbors g)
                             return $ vs' : vs''
 
-          prune' []    = return []
-          prune' (h:t) = do vis ← visited h
-                            if vis 
-                              then prune' t
-                              else do visit h
-                                      t' ← prune' t
-                                      return $ h:t'
+paths ∷ Graph → [Vertex] → Forest Vertex
+paths g vs = prunePaths (order g) (map (generate g) vs)
                             
 --                   
 -- * Edge properties *
@@ -360,3 +342,39 @@ edgesToConList o es = runST $ do
   forM_ [0.. o-1] $ \i → unsafeMod v i sort
 
   V.unsafeFreeze v
+
+pruneDfs ∷ Int → Forest Vertex → Forest Vertex
+pruneDfs n ts = runM n False (chop ts)
+  where  chop []       = return []
+         chop (Node v ts' : us) = do vis ← visited v
+                                     if vis 
+                                     then 
+                                       chop us
+                                     else do 
+                                       visit v
+                                       as ← chop ts'
+                                       bs ← chop us
+                                       return (Node v as : bs)
+
+pruneBfs ∷ [Vertex] → SetM e Bool [Vertex]
+pruneBfs []    = return []
+pruneBfs (h:t) = do vis ← visited h
+                    if vis 
+                      then pruneBfs t
+                      else do visit h
+                              t' ← pruneBfs t
+                              return $ h:t'
+
+prunePaths ∷ Int → Forest Vertex → Forest Vertex
+prunePaths n ts = runM n False $ chop ts
+  where  chop []       = return []
+         chop (Node v ts' : us) = do bs  ← chop us
+                                     vis ← visited v
+                                     if vis 
+                                      then 
+                                        return bs 
+                                      else do 
+                                        visit v
+                                        as ← chop ts'
+                                        unvisit v
+                                        return (Node v as : bs)
