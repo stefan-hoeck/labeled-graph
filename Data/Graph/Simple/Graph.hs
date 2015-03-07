@@ -27,7 +27,10 @@ module Data.Graph.Simple.Graph (
 , cyclicVertices
 
 -- * Searches
-, dfs, bfs, reachable, paths
+, dfs, bfs, reachable, paths, pathsN
+, pathTree, pathTreeN, treeToPaths, treeToMaxPaths
+, cycles, cyclesN
+
 
 -- * Pretty printing
 , pretty, prettyShow
@@ -256,9 +259,68 @@ bfs g v = runM (order g) False $ bfs' [v]
                             vs'' ← bfs' (vs' >>= neighbors g)
                             return $ vs' : vs''
 
-paths ∷ Graph → [Vertex] → Forest Vertex
-paths g vs = prunePaths (order g) (map (generate g) vs)
-                            
+
+-- | Creates a tree of all paths starting from the vertex
+--   given
+pathTree ∷ Graph → Vertex → Tree Vertex
+pathTree = pathTreeN (-1)
+
+-- | Creates a tree of paths up to the given number of
+--   vertices starting from the vertex given
+pathTreeN ∷ Int → Graph → Vertex → Tree Vertex
+pathTreeN n g v = head $ prunePaths n (order g) [generate g v]
+
+
+-- | Returns all paths starting from a given vertex
+paths ∷ Graph → Vertex → [[Vertex]]
+paths g = treeToPaths . pathTree g
+
+
+-- | Returns all paths of a given length
+--   starting from a given vertex
+pathsN ∷ Int → Graph → Vertex → [[Vertex]]
+pathsN n g = filter ((n==) . length) . treeToMaxPaths . pathTreeN n g
+
+cycles ∷ Graph → Vertex → [[Vertex]]
+cycles g v = fmap (v:) . filter (keepCycle g v) $ paths g v
+
+cyclesN ∷ Int → Graph → Vertex → [[Vertex]]
+cyclesN n g v = fmap (v:) . filter (keepCycle g v) $ pathsN n g v
+
+keepCycle ∷ Graph → Vertex → [Vertex] → Bool
+keepCycle g v (v':t@(_:_:_)) | adjacent g v v'  = keep t
+                          where keep (v'':_:[]) = v'' > v'
+                                keep (_:t')     = keep t'
+                                keep _          = error "not possible"
+keepCycle _ _ _                                 = False
+
+
+-- -- | Creates all cycles of which the given vertex is part of
+-- cyclesN ∷ Graph → Vertex → [[Vertex]]
+-- cyclesN g v = cycles' 0 $ paths g v
+--     where cycles' d (Node v' cs) | isC d v' = [[v']] : cs >>= cycles' (d+1)
+--                                  | otherwise = 
+--           isC d v' = (d > 2) && adjavent g v v'
+-- 
+-- -- | Creates all cycles of the given length
+-- --   of which the given vertex is part of
+-- cyclesN ∷ Int → Graph → Vertex → [[Vertex]]
+-- cyclesN n g v = cycles' n $ pathsN n g v
+--     where cycles' 0 (Node v' _) | adjacent g v v' = [[v']]
+--                                 | otherwise       = []
+--           cycles' d (Node v' cs) = fmap (v':) $ cs >>= cycles' (d-1)
+
+treeToPaths ∷ Tree a → [[a]]
+treeToPaths = ttp []
+    where ttp ps (Node v cs) = let ps' = v:ps
+                               in ps' : (cs >>= ttp ps')
+
+treeToMaxPaths ∷ Tree a → [[a]]
+treeToMaxPaths = ttp []
+    where ttp ps (Node v []) = [v:ps]
+          ttp ps (Node v cs) = let ps' = v:ps
+                               in cs >>= ttp ps'
+
 --                   
 -- * Edge properties *
 
@@ -365,16 +427,17 @@ pruneBfs (h:t) = do vis ← visited h
                               t' ← pruneBfs t
                               return $ h:t'
 
-prunePaths ∷ Int → Forest Vertex → Forest Vertex
-prunePaths n ts = runM n False $ chop ts
-  where  chop []       = return []
-         chop (Node v ts' : us) = do bs  ← chop us
-                                     vis ← visited v
-                                     if vis 
-                                      then 
-                                        return bs 
-                                      else do 
-                                        visit v
-                                        as ← chop ts'
-                                        unvisit v
-                                        return (Node v as : bs)
+prunePaths ∷ Int → Int → Forest Vertex → Forest Vertex
+prunePaths d n ts = runM n False $ chop d ts
+  where  chop _ []       = return []
+         chop 0 _        = return []
+         chop d' (Node v ts' : us) = do bs  ← chop d' us
+                                        vis ← visited v
+                                        if vis 
+                                        then 
+                                          return bs 
+                                        else do 
+                                          visit v
+                                          as ← chop (d'-1) ts'
+                                          unvisit v
+                                          return (Node v as : bs)
