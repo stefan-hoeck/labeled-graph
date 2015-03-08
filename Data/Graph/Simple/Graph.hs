@@ -40,7 +40,7 @@ module Data.Graph.Simple.Graph (
 ) where
 
 import Control.DeepSeq (NFData)
-import Control.Monad (when)
+import Control.Monad (unless)
 import Control.Monad.ST (runST)
 import Data.Foldable (forM_, toList, foldMap)
 import Data.Graph.Simple.Edge
@@ -56,6 +56,7 @@ import qualified Data.BitSet.Word as BS
 import qualified Data.Map as M
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
+import qualified Data.Vector.Unboxed.Mutable as MVU
 
 -- ** Graphs ** --
 --
@@ -234,23 +235,8 @@ generate g v  = Node v $ map (generate g) (neighbors g v)
 
 
 cyclicVertices ∷ Graph → [Vertex]
-cyclicVertices g = filter isInCycle vs
-    where isInCycle v = (cs UV.! unVertex v) == 2
-          vs          = vertices g
-          cs          = runMV (order g) 0 $ markCycles [] forest
-          forest      = map (generate g) vs
-
-markCycles ∷ [Vertex] → Forest Vertex → SetM s Int ()
-markCycles _ []                = return ()
-markCycles ps (Node v ts : us) = do vis ← getM v
-                                    if vis > 0
-                                      then markV (0 ∷ Int) ps [v]
-                                      else setM 1 v >> markCycles (v:ps) ts
-                                    markCycles ps  us
-
-    where markV c (h:t) cs | v == h    = when (c > 1) (forM_ cs $ setM 2)
-                           | otherwise = markV (c+1) t (h:cs)
-          markV _ []    _              = return ()
+cyclicVertices g = let cs = cvs g
+                   in filter ((cs UV.!) . unVertex) (vertices g)
 
 bfs ∷ Graph → Vertex → [[Vertex]]
 bfs g v = runM (order g) False $ bfs' [v]
@@ -294,21 +280,6 @@ keepCycle g v (v':t@(_:_:_)) | adjacent g v v'  = keep t
                                 keep _          = error "not possible"
 keepCycle _ _ _                                 = False
 
-
--- -- | Creates all cycles of which the given vertex is part of
--- cyclesN ∷ Graph → Vertex → [[Vertex]]
--- cyclesN g v = cycles' 0 $ paths g v
---     where cycles' d (Node v' cs) | isC d v' = [[v']] : cs >>= cycles' (d+1)
---                                  | otherwise = 
---           isC d v' = (d > 2) && adjavent g v v'
--- 
--- -- | Creates all cycles of the given length
--- --   of which the given vertex is part of
--- cyclesN ∷ Int → Graph → Vertex → [[Vertex]]
--- cyclesN n g v = cycles' n $ pathsN n g v
---     where cycles' 0 (Node v' _) | adjacent g v v' = [[v']]
---                                 | otherwise       = []
---           cycles' d (Node v' cs) = fmap (v':) $ cs >>= cycles' (d-1)
 
 treeToPaths ∷ Tree a → [[a]]
 treeToPaths = ttp []
@@ -441,3 +412,46 @@ prunePaths d n ts = runM n False $ chop d ts
                                           as ← chop (d'-1) ts'
                                           unvisit v
                                           return (Node v as : bs)
+
+cvs ∷ Graph → UV.Vector Bool
+cvs g = let o = order g
+        in
+        runST $ do vs ← MVU.replicate o False     -- visited vertices
+                   mk ← MVU.replicate o (0 ∷ Int) -- vertices marked as cycle endpoints
+                   cs ← MVU.replicate o False     -- vertices in cycles
+
+                   let visited'  = unsafeReadVU vs
+                   let visit' v  = unsafeWriteVU vs v True
+                   let marked'   = unsafeReadVU mk
+                   let mark' v   = unsafeModVU mk v (+1)
+                   let unmark' v = unsafeWriteVU mk v 0
+                   let cycle' v  = unsafeWriteVU cs v True
+                   let ns v      = neighbors g v
+                   let ns' p v   = filter (p /=) $ ns v
+
+                   let check' p v = do vis ← visited' v
+                                       if vis 
+                                       then do
+                                         mark' v            
+                                         return 1
+                                       else do
+                                         visit' v
+                                         is ← mapM (check' v) $ ns' p v
+                                         let s = sum is
+                                         if s > 0    -- we are within a cycle
+                                         then do
+                                           cycle'  v
+                                           m ← marked' v
+                                           if m > 0  -- we are at the end of some cycles
+                                           then do
+                                             unmark' v
+                                             return $ s-m
+                                           else return s
+                                         else return s
+
+                   let check v = do vis ← visited' v
+                                    unless vis $ mapM_ (check' v) (ns v)
+
+                   mapM_ check $ vertices g
+
+                   UV.unsafeFreeze cs
