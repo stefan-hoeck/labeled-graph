@@ -8,6 +8,7 @@ module Data.Graph.Simple.LGraph (
 , isNull, isEmpty, isTrivial, order, size, vertices
 , minDegree, maxDegree
 , vlabel, elabel
+, edgesAt, edgeLabelsAt
 
 , mapE, mapV
 
@@ -121,6 +122,11 @@ minDegree = G.minDegree . graph
 maxDegree ∷ LGraph e v → Maybe Int
 maxDegree = G.maxDegree . graph
 
+edgesAt ∷ LGraph e v → Vertex → [Edge]
+edgesAt g = G.edgesAt (graph g)
+
+edgeLabelsAt ∷ LGraph e v → Vertex → [e]
+edgeLabelsAt (LGraph g _ el) = fmap (el M.!) . G.edgesAt g
 
 -- * Modifying Graphs * --
 --

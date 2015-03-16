@@ -17,7 +17,7 @@ module Data.Graph.Simple.Graph (
 -- , reachable
 
 -- * Edge properties
-, isPendantEdge, edgeIn
+, isPendantEdge, edgeIn, edgesAt
 
 -- * Subgraphs
 , filterE, filterV, inducedSubgraph, connectedSubgraphs
@@ -306,6 +306,9 @@ isPendantEdge g e = let (x, y) = (edgeX e, edgeY e)
 
 edgeIn ∷ Graph → Edge → Bool
 edgeIn g e = adjacent g (edgeX e) (edgeY e)
+
+edgesAt ∷ Graph → Vertex → [Edge]
+edgesAt g v = fmap (edge v) $ neighbors g v
 
 
 
