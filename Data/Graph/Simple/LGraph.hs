@@ -10,7 +10,7 @@ module Data.Graph.Simple.LGraph (
 , vlabel, elabel
 , edgesAt, edgeLabelsAt
 
-, mapE, mapV
+, mapE, mapV, emapE, vmapV
 
 , filterE
 
@@ -134,8 +134,15 @@ edgeLabelsAt (LGraph g _ el) = fmap (el M.!) . G.edgesAt g
 mapE ∷ (e → e') → LGraph e v → LGraph e' v
 mapE f (LGraph g vs es) = LGraph g vs (fmap f es)
 
+emapE ∷ (Edge → e → e') → LGraph e v → LGraph e' v
+emapE f (LGraph g vs es) = LGraph g vs (M.mapWithKey f es)
+
 mapV ∷ (v → v') → LGraph e v → LGraph e v'
 mapV f (LGraph g vs es) = LGraph g (fmap f vs) es
+
+vmapV ∷ (Vertex → v → v') → LGraph e v → LGraph e v'
+vmapV f (LGraph g vs es) = LGraph g (V.imap f' vs) es
+    where f' = f . vertex
 
 
 filterE ∷ (e → Bool) → LGraph e v → LGraph e v
