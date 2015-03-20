@@ -27,7 +27,7 @@ instance Show Edge where
 
 
 -- | Creates an edge from two vertices
---   The two vertices must not be equal
+--   Returns nothing if the two Vertices are equal
 edgeMay ∷ Vertex → Vertex → Maybe Edge
 edgeMay a b | a == b      = Nothing
             | a < b       = Just $ unsafeEdge a b
@@ -94,11 +94,13 @@ edgesAdjacent e1 e2 = connects e2 (edgeX e1) || connects e2 (edgeY e1)
 
 
 
+-- | A wrapper for sorted lists of edges without dublicates
 newtype Edges = Edges { unEdges ∷ [Edge] }
   deriving (Show, Eq, Ord)
 
 -- | Wraps a list of edges without sorting or checking
 --   for dublicates
+{-# INLINE unsafeEdges #-}
 unsafeEdges ∷ [Edge] → Edges
 unsafeEdges = Edges
 

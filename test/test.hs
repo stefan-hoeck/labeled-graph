@@ -2,6 +2,7 @@
 
 module Main (main) where
 
+import {-@ HTF_TESTS @-} EdgeTests
 import {-@ HTF_TESTS @-} VertexTests
 import {-@ HTF_TESTS @-} UtilTests
 import Test.Framework
