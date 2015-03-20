@@ -1,10 +1,14 @@
 #!/bin/bash
 
+# Delete build artifacts if they exist
+[ -d dist ] && rm -r dist
+
 # Setup a new sandbox
 cabal sandbox delete
 cabal sandbox init
 
 # Install dependencies, configure and build
-cabal install --dependencies
-cabal configure
+cabal install --dependencies --enable-tests -O2
+cabal configure --enable-tests -O2
 cabal build
+cabal test
