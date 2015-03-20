@@ -3,11 +3,9 @@
 module Data.Graph.Simple.Vertex (
   Vertex, unVertex
 
-, vertex, vertexMay
+, vertex, vertexMay, unsafeVertex
 , minVAsInt, maxVAsInt, minVertex, maxVertex
 ) where
-
-import Data.Monoid ((<>))
 
 -- | Newtype representing vertices in a graph
 newtype Vertex = Vertex { unVertex ∷ Int }
@@ -32,13 +30,25 @@ instance Num Vertex where
   signum _ = Vertex 1
   fromInteger = vertex . fromInteger
 
+-- | Create a vertex from an Int
+--   Returns Nothing if the Int is out of
+--   valid bounds.
 vertexMay ∷ Int → Maybe Vertex
 vertexMay v | isValidVertex v = Just $ Vertex v
             | otherwise       = Nothing
 
+-- | Create a vertex from an Int
+--   Used i `mod` maxVAsInt if i is out of bounds.
 vertex ∷ Int → Vertex
 vertex v | isValidVertex v = Vertex v
-         | otherwise       = error $ invalidVertexMsg v
+         | otherwise       = Vertex $ v `mod` maxVAsInt
+
+-- | Create a vertex from an Int
+--   No bounds checking for maximum performance. Highly
+--   unsafe!
+{-# INLINE unsafeVertex #-}
+unsafeVertex ∷ Int → Vertex
+unsafeVertex = Vertex
 
 isValidVertex ∷ Int → Bool
 isValidVertex v = minVAsInt <= v && v <= maxVAsInt
@@ -59,12 +69,3 @@ minVertex = Vertex minVAsInt
 --   systems, it is 3'037'000'498.
 maxVertex ∷ Vertex
 maxVertex = Vertex maxVAsInt
-
-invalidVertexMsg ∷ Int → String
-invalidVertexMsg v = "Invalid vertex: " 
-                     <> show v
-                     <> "; Vertices must lie in the interval ["
-                     <> show minVAsInt
-                     <> ","
-                     <> show maxVAsInt
-                     <> "]"
