@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -F -pgmF htfpp #-}
+
 module VertexTests (htf_thisModulesTests) where
 
 import Data.Maybe (isNothing, isJust)
@@ -29,6 +30,3 @@ prop_vertex_mod x = x `mod` maxVAsInt == (unVertex . vertex) x
 
 isValid ∷ Int → Bool
 isValid x = x >= 0 && x <= maxVAsInt
-
-instance Arbitrary Vertex where
-  arbitrary = fmap unsafeVertex $ choose (minVAsInt, maxVAsInt)
