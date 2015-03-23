@@ -29,7 +29,7 @@ Test-Suite test-lgraph
  
   hs-source-dirs:      "." ,test
 
-  build-depends:       base, vector, safe, containers
+  build-depends:       base, vector, safe, containers, deepseq, bitset
                      , HTF          == 0.12.2.*
                      , QuickCheck   == 2.8
 

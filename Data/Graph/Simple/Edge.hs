@@ -9,11 +9,14 @@ module Data.Graph.Simple.Edge (
 
 ,  Edges, unsafeEdges, unEdges, emptyEdges, edgesFromList, normalizeEdges
 ,  completeEdges, chainEdges
+,  maximumV, minimumV
 ) where
 
 import Data.Graph.Simple.Util (sortedUnique)
 import Data.Graph.Simple.Vertex (Vertex, unVertex, maxVertex, vertex, minVertex)
 import Data.Monoid ((<>))
+import Safe (maximumMay, minimumMay)
+
 import qualified Data.Map as M
 
 -- ** Edge ** --
@@ -133,3 +136,9 @@ edgesNull = null . unEdges
 
 filterEdges ∷ (Edge → Bool) → Edges → Edges
 filterEdges p = Edges . filter p . unEdges
+
+maximumV ∷ Edges → Maybe Vertex
+maximumV = maximumMay . fmap edgeY . unEdges
+
+minimumV ∷ Edges → Maybe Vertex
+minimumV = minimumMay . fmap edgeY . unEdges
