@@ -7,6 +7,7 @@ module Data.Graph.Simple.Graph (
 
 -- * Graph constructors
 , null, empty, complete, chain, complement, fromEdges, fromList
+, fromList', fromEdges'
 
 -- * Graph properties
 , order, size, isNull, isEmpty, isTrivial
@@ -94,11 +95,25 @@ empty n = Graph (V.replicate n []) emptyEdges
 fromList ∷ Int → [Edge] → Graph
 fromList o = fromEdges o . edgesFromList
 
+-- | Builds a graph from a list of edges
+--
+-- The order is take from the largest vertex connected by an edge
+fromList' ∷ [Edge] → Graph
+fromList' = fromEdges' . edgesFromList
+
 
 -- | Builds a graph of the given order from a list of edges
 fromEdges ∷ Int → Edges → Graph
 fromEdges o es = Graph (edgesToConList o es') es
     where es'  = unEdges es
+
+-- | Builds a graph from a list of edges
+--
+-- The order is take from the largest vertex connected by an edge
+fromEdges' ∷ Edges → Graph
+fromEdges' es = let mvMay   = fmap unVertex $ maximumV es
+                    makeG v = fromEdges (v+1) es
+                in  maybe null makeG mvMay
 
 
 -- fromConList ∷ ConList → Graph

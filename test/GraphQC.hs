@@ -1,22 +1,27 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module GraphQC (
-  smallVertex
+  emptyGraph
+, maxSmallVertex
+, smallVertex
 , smallEdge
 , smallEdges
+, EmptyGraph(..)
 , SmallVertex(..)
 , SmallEdge(..)
 , SmallEdges(..)
 ) where
 
-import Data.Graph.Simple.Edge
-import Data.Graph.Simple.Vertex
+import Data.Graph.Simple.Graph
 import Test.Framework
 
 unequal ∷ Eq a ⇒ (a,a) → Bool
 unequal = uncurry (/=)
 
 {- Vertex Generators -}
+
+maxSmallVertex ∷ Int
+maxSmallVertex = 7
 
 smallVertex ∷ Gen Vertex
 smallVertex = fmap getSmallVertex arbitrary
@@ -28,7 +33,8 @@ newtype SmallVertex = SmallVertex { getSmallVertex ∷ Vertex }
   deriving (Eq, Show, Ord, Bounded)
 
 instance Arbitrary  SmallVertex where
-  arbitrary = fmap (SmallVertex . unsafeVertex) $ choose (minVAsInt, 5)
+  arbitrary = fmap (SmallVertex . unsafeVertex) $
+              choose (minVAsInt, maxSmallVertex)
 
 
 {- Edge Generators -}
@@ -60,3 +66,18 @@ newtype SmallEdges = SmallEdges { getSmallEdges ∷ Edges }
 
 instance Arbitrary SmallEdges where
   arbitrary = fmap (SmallEdges . edgesFromList) $ listOf smallEdge
+
+
+{- Graph Generators -}
+
+emptyGraph ∷ Gen Graph
+emptyGraph = fmap getEmptyGraph arbitrary
+
+instance Arbitrary Graph where
+  arbitrary = fmap (fromEdges' . getSmallEdges) arbitrary
+
+
+newtype EmptyGraph = EG { getEmptyGraph ∷ Graph }
+
+instance Arbitrary EmptyGraph where
+  arbitrary = fmap (EG . empty . getSmall) arbitrary
