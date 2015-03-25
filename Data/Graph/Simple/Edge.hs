@@ -7,17 +7,15 @@ module Data.Graph.Simple.Edge (
 , edgesAdjacent, edgesSize
 , edgesNull, filterEdges
 
-,  Edges, unsafeEdges, unEdges, emptyEdges, edgesFromList, normalizeEdges
+,  Edges, unsafeEdges, unEdges, emptyEdges, edgesFromList
 ,  completeEdges, chainEdges
 ,  maximumV, minimumV
 ) where
 
 import Data.Graph.Simple.Util (sortedUnique)
-import Data.Graph.Simple.Vertex (Vertex, unVertex, maxVertex, vertex, minVertex)
+import Data.Graph.Simple.Vertex (Vertex, unVertex, maxVertex, vertex)
 import Data.Monoid ((<>))
 import Safe (maximumMay, minimumMay)
-
-import qualified Data.Map as M
 
 -- ** Edge ** --
 --
@@ -119,15 +117,6 @@ completeEdges n = Edges [x<->y | x ← [0..n-1], y ← [x+1..n-1]]
 chainEdges ∷ Int → Edges
 chainEdges n = Edges [x<->(x+1) | x ← [0..n-2]]
 
-
--- | Takes a list of arbitrary edges and transforms them
---   to link vertices from 1 to n where n is the total
---   number of distinct vertices found in the list.
-normalizeEdges ∷ Edges → Edges
-normalizeEdges (Edges es) = Edges $ fmap (transformEdge (map' M.!)) es
-  where map' = M.fromList $ zip vs [minVertex..]
-        vs   = sortedUnique (es >>= edgeVertices)
-
 edgesSize ∷ Edges → Int
 edgesSize = length . unEdges
 
@@ -141,4 +130,4 @@ maximumV ∷ Edges → Maybe Vertex
 maximumV = maximumMay . fmap edgeY . unEdges
 
 minimumV ∷ Edges → Maybe Vertex
-minimumV = minimumMay . fmap edgeY . unEdges
+minimumV = minimumMay . fmap edgeX . unEdges
