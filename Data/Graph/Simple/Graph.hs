@@ -10,7 +10,7 @@ module Data.Graph.Simple.Graph (
 , fromList', fromEdges'
 
 -- * Graph properties
-, order, size, isNull, isEmpty, isTrivial
+, order, size, isNull, isEmpty, isTrivial, isComplete
 , minDegree, maxDegree, vertices
 
 -- * Vertex properties
@@ -164,6 +164,12 @@ isEmpty = edgesNull . edges
 isTrivial ∷ Graph → Bool
 isTrivial = (1 ==) . order
 
+-- | True if the graph is complete (every vertex is adjacent
+--   to every other vertex)
+isComplete ∷ Graph → Bool
+isComplete g = let o = order g
+               in  size g == (o * (o-1)) `div` 2
+
 
 -- | The order (number of vertices) of a graph
 order ∷ Graph → Int
@@ -176,7 +182,8 @@ size = edgesSize . edges
 
 
 vertices ∷ Graph → [Vertex]
-vertices g = [minVertex.. vertex $ (order g - 1)]
+vertices g | isNull g  = []
+           | otherwise = [minVertex.. vertex $ (order g - 1)]
 
 
 minDegree ∷ Graph → Maybe Int
@@ -206,7 +213,7 @@ adjacent g v1 v2 = v2 `elem` neighbors g v1
 --
 --   O(n) where n is the number of neighbors
 --   of the second vertex. For molecules, n ≤ 4 in
---   most cases, so it is defacto O(1).
+--   most cases, so it is de-facto O(1).
 degree ∷ Graph → Vertex → Int
 degree g = length . neighbors g
 
@@ -234,7 +241,8 @@ reachable ∷ Graph → Vertex → [Vertex]
 reachable g v = foldMap toList $ dfs g [v]
 
 isConnected ∷ Graph → Bool
-isConnected g = (length $ reachable g 0) == order g
+isConnected g | isNull g  = True
+              | otherwise = (length $ reachable g 0) == order g
 
 -- | Depth first search implementation similar to
 --   the one found in Data.Graph of the containers
@@ -338,7 +346,7 @@ edgesAt g v = fmap (edge v) $ neighbors g v
 --   in the new graph
 inducedSubgraph ∷ Graph → [Vertex] → Graph
 inducedSubgraph g vs = let bs = BS.fromList vs
-                       in filterV (`BS.member` bs) g
+                       in  filterV (`BS.member` bs) g
 
 
 -- | Returns a subgraph of the given graph, keeping

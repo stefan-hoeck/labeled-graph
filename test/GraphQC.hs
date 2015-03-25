@@ -1,11 +1,18 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module GraphQC (
-  emptyGraph
+  chainGraph
+, completeGraph
+, emptyGraph
 , maxSmallVertex
+, maxChainSize
+, maxCompleteSize
 , smallVertex
 , smallEdge
 , smallEdges
+
+, ChainGraph(..)
+, CompleteGraph(..)
 , EmptyGraph(..)
 , SmallVertex(..)
 , SmallEdge(..)
@@ -21,7 +28,13 @@ unequal = uncurry (/=)
 {- Vertex Generators -}
 
 maxSmallVertex ∷ Int
-maxSmallVertex = 7
+maxSmallVertex = 10
+
+maxCompleteSize ∷ Int
+maxCompleteSize = 20
+
+maxChainSize ∷ Int
+maxChainSize = 100
 
 smallVertex ∷ Gen Vertex
 smallVertex = fmap getSmallVertex arbitrary
@@ -73,11 +86,32 @@ instance Arbitrary SmallEdges where
 emptyGraph ∷ Gen Graph
 emptyGraph = fmap getEmptyGraph arbitrary
 
+completeGraph ∷ Gen Graph
+completeGraph = fmap getCompleteGraph arbitrary
+
+chainGraph ∷ Gen Graph
+chainGraph = fmap getChainGraph arbitrary
+
 instance Arbitrary Graph where
-  arbitrary = fmap (fromEdges' . getSmallEdges) arbitrary
+  arbitrary = frequency [(10, anyGraph)
+                        ,(1, emptyGraph)
+                        ,(2, completeGraph)]
+    where anyGraph = fmap (fromEdges' . getSmallEdges) arbitrary
 
 
 newtype EmptyGraph = EG { getEmptyGraph ∷ Graph }
 
 instance Arbitrary EmptyGraph where
   arbitrary = fmap (EG . empty . getSmall) arbitrary
+
+
+newtype CompleteGraph = CompG { getCompleteGraph ∷ Graph }
+
+instance Arbitrary CompleteGraph where
+  arbitrary = fmap (CompG . complete) $ choose (1, maxCompleteSize)
+
+
+newtype ChainGraph = ChainG { getChainGraph ∷ Graph }
+
+instance Arbitrary ChainGraph where
+  arbitrary = fmap (ChainG . chain) $ choose (1, maxChainSize)
