@@ -7,6 +7,7 @@ import Data.Maybe (isNothing)
 import Data.Graph.Simple.Edge
 import Data.Graph.Simple.Vertex
 import GraphQC
+import Safe (minimumMay, maximumMay)
 import Test.Framework
 
 import qualified Data.Set as S
@@ -112,6 +113,27 @@ prop_chainEdges_max (Small n) = let n' = abs n
                                     es = unEdges $ chainEdges n'
                                     mx = maximum es
                                 in  n' > 1 ==> mx == ((n'-2) <-> (n'-1))
+
+prop_edgesSize ∷ Edges → Bool
+prop_edgesSize es = edgesSize es == length (unEdges es)
+
+prop_edgesNull ∷ Edges → Bool
+prop_edgesNull es = edgesNull es == null (unEdges es)
+
+prop_filterEdges ∷ Edges → Bool
+prop_filterEdges es = let p   = flip connects 1
+                          es' = unEdges $ filterEdges p es
+                      in filter p (unEdges es) == es'
+
+prop_minimumV ∷ Edges → Bool
+prop_minimumV es = let m = minimumV es
+                       ok = (m <=) . minimumMay . edgeVertices
+                   in  all ok $ unEdges es
+
+prop_maximumV ∷ Edges → Bool
+prop_maximumV es = let m = maximumV es
+                       ok = (m >=) . maximumMay . edgeVertices
+                   in  all ok $ unEdges es
 
 validEdges ∷ Edges → Bool
 validEdges es = let es' = unEdges es
