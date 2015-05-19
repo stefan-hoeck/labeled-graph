@@ -11,7 +11,6 @@ module Data.Graph.Simple.Util (
 , SetM(..), runM, runMV, setM, getM, modM, visit, visited, unvisit
 ) where
 
-import Control.Applicative (Applicative(..))
 import Control.Monad.ST (ST, runST)
 import Data.Graph.Simple.Vertex (Vertex, unVertex)
 import Data.List (sort)

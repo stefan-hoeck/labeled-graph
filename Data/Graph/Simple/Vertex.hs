@@ -7,9 +7,11 @@ module Data.Graph.Simple.Vertex (
 , minVAsInt, maxVAsInt, minVertex, maxVertex
 ) where
 
+import Control.DeepSeq (NFData)
+
 -- | Newtype representing vertices in a graph
 newtype Vertex = Vertex { unVertex ∷ Int }
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, NFData)
 
 instance Show Vertex where
   show (Vertex v) = 'V' : show v

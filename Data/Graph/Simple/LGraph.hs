@@ -22,11 +22,10 @@ module Data.Graph.Simple.LGraph (
 ) where
 
 import Control.DeepSeq (NFData)
-import Data.Foldable (Foldable, foldMap, foldr)
+import Data.Foldable (foldr)
 import Data.Graph.Simple.Edge
 import Data.Graph.Simple.Vertex
 import Data.Maybe (fromJust)
-import Data.Traversable (Traversable, traverse)
 import GHC.Generics (Generic)
 import Prelude hiding (null, foldr)
 

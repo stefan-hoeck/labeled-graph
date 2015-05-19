@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Data.Graph.Simple.Edge (
   Edge, unEdge
 
@@ -12,6 +14,7 @@ module Data.Graph.Simple.Edge (
 ,  maximumV, minimumV
 ) where
 
+import Control.DeepSeq (NFData)
 import Data.Graph.Simple.Util (sortedUnique)
 import Data.Graph.Simple.Vertex (Vertex, unVertex, maxVertex, vertex, minVertex)
 import Data.Monoid ((<>))
@@ -23,7 +26,7 @@ import qualified Data.Map as M
 --
 
 newtype Edge = Edge { unEdge ∷ Int }
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, NFData)
 
 instance Show Edge where
   show e = show (edgeX e) <> " <-> " <> show (edgeY e)
@@ -99,7 +102,7 @@ edgesAdjacent e1 e2 = connects e2 (edgeX e1) || connects e2 (edgeY e1)
 
 -- | A wrapper for sorted lists of edges without dublicates
 newtype Edges = Edges { unEdges ∷ [Edge] }
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, NFData)
 
 -- | Wraps a list of edges without sorting or checking
 --   for dublicates

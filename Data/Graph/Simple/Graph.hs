@@ -43,7 +43,7 @@ module Data.Graph.Simple.Graph (
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Control.Monad.ST (runST)
-import Data.Foldable (forM_, toList, foldMap)
+import Data.Foldable (forM_, toList)
 import Data.Graph.Simple.Edge
 import Data.Graph.Simple.Util
 import Data.Graph.Simple.Vertex
@@ -53,7 +53,7 @@ import GHC.Generics (Generic)
 import Prelude hiding (null)
 import Safe.Foldable (minimumMay, maximumMay)
 
-import qualified Data.BitSet.Word as BS
+-- import qualified Data.BitSet.Word as BS
 import qualified Data.Map as M
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
@@ -337,8 +337,7 @@ edgesAt g v = fmap (edge v) $ neighbors g v
 --   Note that the numbering of vertices will be adjusted
 --   in the new graph
 inducedSubgraph ∷ Graph → [Vertex] → Graph
-inducedSubgraph g vs = let bs = BS.fromList vs
-                       in filterV (`BS.member` bs) g
+inducedSubgraph g vs = filterV (`elem` vs) g
 
 
 -- | Returns a subgraph of the given graph, keeping
