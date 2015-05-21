@@ -344,6 +344,7 @@ edgesAt g v = fmap (edge v) $ neighbors g v
 --
 --   Note that the numbering of vertices will be adjusted
 --   in the new graph
+--   TODO: Use more efficient implementation (BitSets, Vectors of Bools)
 inducedSubgraph ∷ Graph → [Vertex] → Graph
 inducedSubgraph g vs = filterV (`elem` vs) g
 

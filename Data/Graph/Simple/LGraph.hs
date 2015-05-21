@@ -7,7 +7,7 @@ module Data.Graph.Simple.LGraph (
 
 , isNull, isEmpty, isTrivial, order, size, vertices
 , minDegree, maxDegree
-, vlabel, elabel
+, vlabel, elabelM
 , edgesAt, edgeLabelsAt
 
 , mapE, mapV, emapE, vmapV
@@ -25,7 +25,6 @@ import Control.DeepSeq (NFData)
 import Data.Foldable (foldr)
 import Data.Graph.Simple.Edge
 import Data.Graph.Simple.Vertex
-import Data.Maybe (fromJust)
 import GHC.Generics (Generic)
 import Prelude hiding (null, foldr)
 
@@ -76,11 +75,14 @@ empty o fv   = LGraph G.null vs M.empty
 vlabel ∷ LGraph e v → Vertex → v
 vlabel g v = (vlabels g) V.! (unVertex v)
 
+-- | Extract the label at a given edge
+elabel ∷ LGraph e v → Edge → e
+elabel g e = elabels g M.! e
+
 
 -- | Extract the label at a given edge
-elabel ∷ LGraph e v → Edge → Maybe e
-elabel g e = M.lookup e (elabels g)
-
+elabelM ∷ LGraph e v → Edge → Maybe e
+elabelM g e = M.lookup e (elabels g)
 
 -- * Basic Graph properties * --
 --
@@ -155,7 +157,7 @@ filterE p (LGraph g vs es) = LGraph g' vs es'
 pretty ∷ ((Vertex,v) → String) → ((Edge,e) → String) → LGraph e v → String
 pretty fv fe g = G.pretty dispV dispE $ graph g
     where dispV v = fv (v, vlabel g v)
-          dispE e = fe (e, fromJust $ elabel g e)
+          dispE e = fe (e, elabel g e)
 
 prettyShow ∷ (Show e, Show v) ⇒ LGraph e v → String
 prettyShow = pretty disp disp
