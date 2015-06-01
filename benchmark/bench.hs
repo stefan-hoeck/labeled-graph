@@ -2,14 +2,16 @@
 
 module Main where
 
-import Data.Foldable (forM_)
+import Data.Graph.Cycles
 import Data.Graph.Simple.Graph
 import Data.Monoid ((<>))
 import Data.Time.Clock
+import Data.Tree (drawForest, Forest)
 
 
 main ∷ IO ()
-main = forM_ [500, 1000 .. 2000] benchConList
+main = let draw f = putStrLn $ drawForest $ (fmap . fmap) show f
+       in  mapM_ draw $ reducedCycleGraph testG
 
 benchConList ∷ Int → IO ()
 benchConList o = doBench "ConList" o f
@@ -22,3 +24,8 @@ doBench msg ini f = do
   end   ← getCurrentTime
   let diff = diffUTCTime end start
   putStrLn $ msg <> " with param " <> show ini <> " took " <> show diff
+
+testG ∷ Graph
+testG = fromList' [0 <-> 1, 1 <-> 2, 2 <-> 3, 1 <-> 4, 4 <-> 5,
+                   5 <-> 6, 6 <-> 7, 7 <-> 8, 8 <-> 9, 9 <-> 10,
+                   0 <-> 10, 3 <-> 11, 11 <-> 12, 3 <-> 12, 1 <-> 7]

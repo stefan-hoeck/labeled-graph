@@ -14,7 +14,7 @@ module Data.Graph.Simple.Graph (
 , minDegree, maxDegree, vertices
 
 -- * Vertex properties
-, degree, degrees, neighbors, adjacent, isPendant, isIsolate
+, degree, degrees, degreesV, neighbors, adjacent, isPendant, isIsolate
 -- , reachable
 
 -- * Edge properties
@@ -24,13 +24,9 @@ module Data.Graph.Simple.Graph (
 , filterE, filterV, inducedSubgraph, connectedSubgraphs
 , isConnected
 
--- * Cycles
-, cyclicVertices
-
 -- * Searches
 , dfs, bfs, reachable, paths, pathsN
 , pathTree, pathTreeN, treeToPaths, treeToMaxPaths
-, cycles, cyclesN
 
 
 -- * Pretty printing
@@ -41,7 +37,6 @@ module Data.Graph.Simple.Graph (
 ) where
 
 import Control.DeepSeq (NFData)
-import Control.Monad (unless)
 import Control.Monad.ST (runST)
 import Data.Foldable (forM_, toList)
 import Data.Graph.Simple.Edge
@@ -57,7 +52,6 @@ import Safe.Foldable (minimumMay, maximumMay)
 import qualified Data.Map as M
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
-import qualified Data.Vector.Unboxed.Mutable as MVU
 
 -- ** Graphs ** --
 --
@@ -220,6 +214,9 @@ degree g = length . neighbors g
 degrees ∷ Graph → [Int]
 degrees g = fmap (degree g) (vertices g)
 
+degreesV ∷ Graph → UV.Vector Int
+degreesV g = UV.generate (order g) (degree g . vertex)
+
 
 isPendant ∷ Graph → Vertex → Bool
 isPendant g v = (degree g v) == 1
@@ -257,17 +254,12 @@ generate ∷ Graph → Vertex → Tree Vertex
 generate g v  = Node v $ map (generate g) (neighbors g v)
 
 
-cyclicVertices ∷ Graph → [Vertex]
-cyclicVertices g = let cs = cvs g
-                   in filter ((cs UV.!) . unVertex) (vertices g)
-
 bfs ∷ Graph → Vertex → [[Vertex]]
 bfs g v = runM (order g) False $ bfs' [v]
     where bfs' []      = return []
           bfs' vs      = do vs'  ← pruneBfs vs
                             vs'' ← bfs' (vs' >>= neighbors g)
                             return $ vs' : vs''
-
 
 -- | Creates a tree of all paths starting from the vertex
 --   given
@@ -289,19 +281,6 @@ paths g = treeToPaths . pathTree g
 --   starting from a given vertex
 pathsN ∷ Int → Graph → Vertex → [[Vertex]]
 pathsN n g = filter ((n==) . length) . treeToMaxPaths . pathTreeN n g
-
-cycles ∷ Graph → Vertex → [[Vertex]]
-cycles g v = fmap (v:) . filter (keepCycle g v) $ paths g v
-
-cyclesN ∷ Int → Graph → Vertex → [[Vertex]]
-cyclesN n g v = fmap (v:) . filter (keepCycle g v) $ pathsN n g v
-
-keepCycle ∷ Graph → Vertex → [Vertex] → Bool
-keepCycle g v (v':t@(_:_:_)) | adjacent g v v'  = keep t
-                          where keep (v'':_:[]) = v'' > v'
-                                keep (_:t')     = keep t'
-                                keep _          = error "not possible"
-keepCycle _ _ _                                 = False
 
 
 treeToPaths ∷ Tree a → [[a]]
@@ -344,9 +323,9 @@ edgesAt g v = fmap (edge v) $ neighbors g v
 --
 --   Note that the numbering of vertices will be adjusted
 --   in the new graph
---   TODO: Use more efficient implementation (BitSets, Vectors of Bools)
 inducedSubgraph ∷ Graph → [Vertex] → Graph
-inducedSubgraph g vs = filterV (`elem` vs) g
+inducedSubgraph g vs = let bm = boolMap (order g) vs
+                       in  filterV ((bm UV.!) . unVertex) g
 
 
 -- | Returns a subgraph of the given graph, keeping
@@ -387,7 +366,8 @@ prettyShow ∷ Graph → String
 prettyShow = pretty show show
 
 
--- * Helper functions * --
+----------------------------------------------------------------------
+-- Algorithms
 
 edgesToConList ∷ Int → [Edge] → ConList
 edgesToConList o es = runST $ do
@@ -438,46 +418,3 @@ prunePaths d n ts = runM n False $ chop d ts
                                           as ← chop (d'-1) ts'
                                           unvisit v
                                           return (Node v as : bs)
-
-cvs ∷ Graph → UV.Vector Bool
-cvs g = let o = order g
-        in
-        runST $ do vs ← MVU.replicate o False     -- visited vertices
-                   mk ← MVU.replicate o (0 ∷ Int) -- vertices marked as cycle endpoints
-                   cs ← MVU.replicate o False     -- vertices in cycles
-
-                   let visited'  = unsafeReadVU vs
-                   let visit' v  = unsafeWriteVU vs v True
-                   let marked'   = unsafeReadVU mk
-                   let mark' v   = unsafeModVU mk v (+1)
-                   let unmark' v = unsafeWriteVU mk v 0
-                   let cycle' v  = unsafeWriteVU cs v True
-                   let ns v      = neighbors g v
-                   let ns' p v   = filter (p /=) $ ns v
-
-                   let check' p v = do vis ← visited' v
-                                       if vis 
-                                       then do
-                                         mark' v            
-                                         return 1
-                                       else do
-                                         visit' v
-                                         is ← mapM (check' v) $ ns' p v
-                                         let s = sum is
-                                         if s > 0    -- we are within a cycle
-                                         then do
-                                           cycle'  v
-                                           m ← marked' v
-                                           if m > 0  -- we are at the end of some cycles
-                                           then do
-                                             unmark' v
-                                             return $ s-m
-                                           else return s
-                                         else return s
-
-                   let check v = do vis ← visited' v
-                                    unless vis $ mapM_ (check' v) (ns v)
-
-                   mapM_ check $ vertices g
-
-                   UV.unsafeFreeze cs

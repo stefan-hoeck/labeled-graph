@@ -8,6 +8,7 @@ module Data.Graph.Simple.Util (
 , unsafeWriteV, unsafeWriteVU
 , unsafeModU, unsafeMod, unsafeModV, unsafeModVU
 
+, boolMap
 , SetM(..), runM, runMV, setM, getM, modM, visit, visited, unvisit
 ) where
 
@@ -77,6 +78,8 @@ unsafeWriteV v i a = MV.unsafeWrite v (unVertex i) a
 unsafeWriteVU ∷ MVU.Unbox a ⇒ MVU.MVector s a → Vertex → a → ST s ()
 unsafeWriteVU v i a = MVU.unsafeWrite v (unVertex i) a
 
+boolMap ∷ Int → [Vertex] → VU.Vector Bool
+boolMap n vs = runMV n False $ mapM_ visit vs
 
 -- Used to mark or count visited vertices in graph algorithms
 newtype SetM s u a = SetM { runSetM ∷ MVU.MVector s u → ST s a }

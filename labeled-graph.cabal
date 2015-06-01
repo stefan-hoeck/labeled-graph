@@ -43,6 +43,7 @@ library
                        Data.Graph.Simple.Vertex
                        Data.Graph.Simple.Edge
                        Data.Graph.Simple.Graph
+                       Data.Graph.Cycles
 
   other-modules:       Data.Graph.Simple.Util
 
