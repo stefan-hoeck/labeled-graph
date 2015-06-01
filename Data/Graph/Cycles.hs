@@ -1,20 +1,27 @@
 module Data.Graph.Cycles (
-  cyclicVertices, cycles, cyclesN
-, reducedCycleGraph
+  cyclicVertices, cycles, cyclesN, cyclicEdges
+, cyclicSubgraph, d2Forest
 ) where
 
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Control.Monad.ST (runST)
 import Data.Graph.Simple.Graph
 import Data.Graph.Simple.Util
-import Data.Tree (Tree(..), Forest)
+import Data.STRef.Strict
+import Data.Tree (Forest)
 
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector.Unboxed.Mutable as MVU
 
+cyclicEdges ∷ Graph → [Edge]
+cyclicEdges = snd . cvs
+
+cyclicSubgraph ∷ Graph → Graph
+cyclicSubgraph g = fromList (order g) $ cyclicEdges g
+
 cyclicVertices ∷ Graph → [Vertex]
-cyclicVertices g = let cs = cvs g
-                   in filter ((cs UV.!) . unVertex) (vertices g)
+cyclicVertices g = let cs = fst $ cvs g
+                   in  filter ((cs UV.!) . unVertex) (vertices g)
 
 cycles ∷ Graph → Vertex → [[Vertex]]
 cycles g v = fmap (v:) . filter (keepCycle g v) $ paths g v
@@ -22,10 +29,10 @@ cycles g v = fmap (v:) . filter (keepCycle g v) $ paths g v
 cyclesN ∷ Int → Graph → Vertex → [[Vertex]]
 cyclesN n g v = fmap (v:) . filter (keepCycle g v) $ pathsN n g v
 
-reducedCycleGraph ∷ Graph → [Forest Vertex]
-reducedCycleGraph g = let gs = connectedSubgraphs $ inducedSubgraph g $ cyclicVertices g
-                      in  fmap (\g' → dfs g' $ vertices g') gs
-
+d2Forest ∷ Graph → Forest Vertex
+d2Forest g = let ds    = degreesV g
+                 valid = (2 ==) . (ds UV.!) . unVertex 
+             in  dfsFiltered g valid
 ----------------------------------------------------------------------
 -- Algorithms
 
@@ -36,26 +43,29 @@ keepCycle g v (v':t@(_:_:_)) | adjacent g v v'  = keep t
                                 keep _          = error "not possible"
 keepCycle _ _ _                                 = False
 
-cvs ∷ Graph → UV.Vector Bool
+cvs ∷ Graph → (UV.Vector Bool, [Edge])
 cvs g = let o = order g
         in
         runST $ do vs ← MVU.replicate o False     -- visited vertices
                    mk ← MVU.replicate o (0 ∷ Int) -- vertices marked as cycle endpoints
                    cs ← MVU.replicate o False     -- vertices in cycles
+                   bs ← newSTRef []
 
-                   let visited'  = unsafeReadVU vs
-                   let visit' v  = unsafeWriteVU vs v True
-                   let marked'   = unsafeReadVU mk
-                   let mark' v   = unsafeModVU mk v (+1)
-                   let unmark' v = unsafeWriteVU mk v 0
-                   let cycle' v  = unsafeWriteVU cs v True
-                   let ns v      = neighbors g v
-                   let ns' p v   = filter (p /=) $ ns v
+                   let visited'   = unsafeReadVU vs
+                   let visit' v   = unsafeWriteVU vs v True
+                   let marked'    = unsafeReadVU mk
+                   let mark' v    = unsafeModVU mk v (+1)
+                   let unmark' v  = unsafeWriteVU mk v 0
+                   let cycle' v   = unsafeWriteVU cs v True
+                   let ns v       = neighbors g v
+                   let ns' p v    = filter (p /=) $ ns v
+                   let addE p v   = modifySTRef bs (edge v p :)
 
                    let check' p v = do vis ← visited' v
                                        if vis 
                                        then do
                                          mark' v            
+                                         addE p v
                                          return 1
                                        else do
                                          visit' v
@@ -65,11 +75,13 @@ cvs g = let o = order g
                                          then do
                                            cycle'  v
                                            m ← marked' v
+                                           let res = s - 2*m
                                            if m > 0  -- we are at the end of some cycles
                                            then do
                                              unmark' v
-                                             return $ s-2*m
-                                           else return s
+                                             when (res > 0) $ addE p v
+                                             return $ res
+                                           else addE p v >> return s
                                          else return s
 
                    let check v = do vis ← visited' v
@@ -77,7 +89,7 @@ cvs g = let o = order g
 
                    mapM_ check $ vertices g
 
-                   UV.unsafeFreeze cs
+                   (,) <$> UV.unsafeFreeze cs <*> readSTRef bs
 
 -- cvs ∷ Graph → UV.Vector Bool
 -- cvs g = let o = order g

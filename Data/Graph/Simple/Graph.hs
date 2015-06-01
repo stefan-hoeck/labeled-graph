@@ -25,12 +25,16 @@ module Data.Graph.Simple.Graph (
 , isConnected
 
 -- * Searches
-, dfs, bfs, reachable, paths, pathsN
+, dfs, dfsFiltered, bfs, reachable, paths, pathsN
 , pathTree, pathTreeN, treeToPaths, treeToMaxPaths
 
 
 -- * Pretty printing
 , pretty, prettyShow
+
+
+-- * Low level
+, pruneDfs
 
 , module Data.Graph.Simple.Vertex
 , module Data.Graph.Simple.Edge
@@ -246,6 +250,18 @@ isConnected g | isNull g  = True
 --   package.
 dfs ∷ Graph → [Vertex] → Forest Vertex
 dfs g vs = pruneDfs (order g) (map (generate g) vs)
+
+
+-- | Depth first search ignoring nodes
+--   which do not fulfill a given predicate.
+--   This is useful for instance to generate
+--   all degree two bridges ins cyclic graphs
+dfsFiltered ∷ Graph → (Vertex → Bool) → Forest Vertex
+dfsFiltered g p = let vs  = filter p $ vertices g
+                      ns  = filter p . neighbors g
+                      gen v = Node v $ fmap gen (ns v)
+                  in  pruneDfs (order g) $ fmap gen vs
+
 
 dff ∷ Graph → Forest Vertex
 dff g = dfs g (vertices g)
