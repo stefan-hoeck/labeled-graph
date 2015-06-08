@@ -7,7 +7,7 @@ module Data.Graph.Simple.LGraph (
 
 , isNull, isEmpty, isTrivial, order, size, vertices
 , minDegree, maxDegree
-, vlabel, elabelM
+, vlabel, elabelM, elabel
 , edgesAt, edgeLabelsAt
 
 , mapE, mapV, emapE, vmapV

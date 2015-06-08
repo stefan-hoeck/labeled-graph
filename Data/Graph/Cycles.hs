@@ -24,10 +24,10 @@ cyclicVertices g = let cs = fst $ cvs g
                    in  filter ((cs UV.!) . unVertex) (vertices g)
 
 cycles ∷ Graph → Vertex → [[Vertex]]
-cycles g v = fmap (v:) . filter (keepCycle g v) $ paths g v
+cycles g v = filter (keepCycle g v) $ paths g v
 
 cyclesN ∷ Int → Graph → Vertex → [[Vertex]]
-cyclesN n g v = fmap (v:) . filter (keepCycle g v) $ pathsN n g v
+cyclesN n g v = filter (keepCycle g v) $ pathsN n g v
 
 d2Forest ∷ Graph → Forest Vertex
 d2Forest g = let ds    = degreesV g
