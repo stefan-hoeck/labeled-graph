@@ -28,10 +28,10 @@ cycles ∷ Graph → Vertex → [[Vertex]]
 cycles g v = filter (keepCycle g v) $ paths g v
 
 cyclesWithEdges ∷ Graph → Vertex → [([Vertex],[Edge])]
-cyclesWithEdges g= fmap (\vs → (vs, cycleEdges vs)) . cycles g
+cyclesWithEdges g = fmap (\vs → (vs, cycleEdges vs)) . cycles g
 
 cyclesNWithEdges ∷ Int → Graph → Vertex → [([Vertex],[Edge])]
-cyclesNWithEdges i g= fmap (\vs → (vs, cycleEdges vs)) . cyclesN i g
+cyclesNWithEdges i g = fmap (\vs → (vs, cycleEdges vs)) . cyclesN i g
 
 cyclesN ∷ Int → Graph → Vertex → [[Vertex]]
 cyclesN n g v = filter (keepCycle g v) $ pathsN n g v
