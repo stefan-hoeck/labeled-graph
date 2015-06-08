@@ -1,6 +1,7 @@
 module Data.Graph.Cycles (
   cyclicVertices, cycles, cyclesN, cyclicEdges
-, cyclicSubgraph, d2Forest
+, cyclicSubgraph, d2Forest, cycleEdges
+, cyclesWithEdges, cyclesNWithEdges
 ) where
 
 import Control.Monad (unless, when)
@@ -26,8 +27,18 @@ cyclicVertices g = let cs = fst $ cvs g
 cycles ∷ Graph → Vertex → [[Vertex]]
 cycles g v = filter (keepCycle g v) $ paths g v
 
+cyclesWithEdges ∷ Graph → Vertex → [([Vertex],[Edge])]
+cyclesWithEdges g= fmap (\vs → (vs, cycleEdges vs)) . cycles g
+
+cyclesNWithEdges ∷ Int → Graph → Vertex → [([Vertex],[Edge])]
+cyclesNWithEdges i g= fmap (\vs → (vs, cycleEdges vs)) . cyclesN i g
+
 cyclesN ∷ Int → Graph → Vertex → [[Vertex]]
 cyclesN n g v = filter (keepCycle g v) $ pathsN n g v
+
+cycleEdges ∷ [Vertex] → [Edge]
+cycleEdges [] = []
+cycleEdges ts@(h:t) = zipWith edge ts (t ++ [h])
 
 d2Forest ∷ Graph → Forest Vertex
 d2Forest g = let ds    = degreesV g
