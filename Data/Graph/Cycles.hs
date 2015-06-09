@@ -1,5 +1,8 @@
 module Data.Graph.Cycles (
-  cyclicVertices, cycles, cyclesN, cyclicEdges
+  Cycle(edges)
+, mergeCycles
+, cyclomaticNumber, numberOfCycles
+, cyclicVertices, cycles, cyclesN, cyclicEdges
 , cyclicSubgraph, d2Forest, cycleEdges
 , cyclesWithEdges, cyclesNWithEdges
 ) where
@@ -13,6 +16,65 @@ import Data.Tree (Forest)
 
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector.Unboxed.Mutable as MVU
+
+-- | A (not necessarily elementary) cycle in a graph
+--   
+--   A cycle is per definition a graph where each vertex
+--   has even degree.
+--
+--   An elementary cycle is a cycle which is connected
+--   and where every vertex has degree two.
+--
+--   The set of all cycles of a graph forms a vector
+--   space - the cycle space. For any graph G the
+--   dimension of its cycle space is the cyclomatic number 
+--
+--     μ(G) = |E| - |V| + c(G)
+--
+--   where c(G) is the number of connected components
+--   of the graph.
+newtype Cycle = Cycle { edges ∷ [Edge] }
+  deriving (Show, Eq, Ord)
+
+
+instance Monoid Cycle where
+  mempty  = Cycle []
+  mappend = mergeCycles
+
+
+-- | Merges two cycles to form a new one
+--
+--   This is the binary operation of the cycle space.
+--   The implementation runs in O(m+n) time, where
+--   m and n are the number of edges in the two cycles
+mergeCycles ∷ Cycle → Cycle → Cycle
+mergeCycles (Cycle c1) (Cycle c2) = Cycle $ merge c1 c2 []
+  where merge [] e2 r                           = reverse r ++ e2
+        merge e1 [] r                           = merge [] e1 r
+        merge as@(a:ta) bs@(b:tb) r | a == b    = merge ta tb r
+                                    | a <  b    = merge ta bs (a:r)
+                                    | otherwise = merge as tb (b:r)
+
+
+-- | Calculates the cyclomatic number μ(G) of a graph G
+--   in O(|V|+|E|) time
+--
+--   The cyclomatic number is equal to the dimension
+--   of the cyclic vector space of G and can be used to
+--   efficiently estimate the complexity of generating
+--   all cycles of a graph.
+--
+--   The total number of cycles in a graph equals 2^μ(G).
+cyclomaticNumber ∷ Graph → Int
+cyclomaticNumber g = let c = length $ dff g
+                     in  size g - order g + c
+
+
+-- | Calculates the number of cycles in a graph
+--   in O(|V|+|E|) time.
+numberOfCycles ∷ Graph → Integer
+numberOfCycles = (2 ^) . cyclomaticNumber
+
 
 cyclicEdges ∷ Graph → [Edge]
 cyclicEdges = snd . cvs

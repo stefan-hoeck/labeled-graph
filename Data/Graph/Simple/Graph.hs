@@ -25,7 +25,7 @@ module Data.Graph.Simple.Graph (
 , isConnected
 
 -- * Searches
-, dfs, dfsFiltered, bfs, reachable, paths, pathsN
+, dfs, dff, dfsFiltered, bfs, reachable, paths, pathsN
 , pathTree, pathTreeN, treeToPaths, treeToMaxPaths
 
 
@@ -241,13 +241,22 @@ connectedSubgraphs g = fmap (inducedSubgraph g . toList) $ dff g
 reachable ∷ Graph → Vertex → [Vertex]
 reachable g v = foldMap toList $ dfs g [v]
 
+
+-- | True if the graph is connected
+--
+--   Runs in O(|V|+|E|) time
 isConnected ∷ Graph → Bool
-isConnected g | isNull g  = True
-              | otherwise = (length $ reachable g 0) == order g
+isConnected g = case dff g of
+                     []  → True
+                     [_] → True
+                     _   → False
+
 
 -- | Depth first search implementation similar to
 --   the one found in Data.Graph of the containers
 --   package.
+--
+--   Runs in O(|V|+|E|) time
 dfs ∷ Graph → [Vertex] → Forest Vertex
 dfs g vs = pruneDfs (order g) (map (generate g) vs)
 
@@ -263,8 +272,16 @@ dfsFiltered g p = let vs  = filter p $ vertices g
                   in  pruneDfs (order g) $ fmap gen vs
 
 
+-- | Depth first search forest containing all the
+--   vertices of a graph.
+--
+--   From the dff we can directly derive the connected components
+--   of a graph
+--
+--   Runs in O(|V|+|E|) time
 dff ∷ Graph → Forest Vertex
 dff g = dfs g (vertices g)
+
 
 generate ∷ Graph → Vertex → Tree Vertex
 generate g v  = Node v $ map (generate g) (neighbors g v)
@@ -277,10 +294,12 @@ bfs g v = runM (order g) False $ bfs' [v]
                             vs'' ← bfs' (vs' >>= neighbors g)
                             return $ vs' : vs''
 
+
 -- | Creates a tree of all paths starting from the vertex
 --   given
 pathTree ∷ Graph → Vertex → Tree Vertex
 pathTree = pathTreeN (-1)
+
 
 -- | Creates a tree of paths up to the given number of
 --   vertices starting from the vertex given
@@ -324,6 +343,7 @@ isPendantEdge g e = let (x, y) = (edgeX e, edgeY e)
 
 edgeIn ∷ Graph → Edge → Bool
 edgeIn g e = adjacent g (edgeX e) (edgeY e)
+
 
 edgesAt ∷ Graph → Vertex → [Edge]
 edgesAt g v = fmap (edge v) $ neighbors g v
@@ -398,6 +418,7 @@ edgesToConList o es = runST $ do
 
   V.unsafeFreeze v
 
+
 pruneDfs ∷ Int → Forest Vertex → Forest Vertex
 pruneDfs n ts = runM n False (chop ts)
   where  chop []       = return []
@@ -411,6 +432,7 @@ pruneDfs n ts = runM n False (chop ts)
                                        bs ← chop us
                                        return (Node v as : bs)
 
+
 pruneBfs ∷ [Vertex] → SetM e Bool [Vertex]
 pruneBfs []    = return []
 pruneBfs (h:t) = do vis ← visited h
@@ -419,6 +441,7 @@ pruneBfs (h:t) = do vis ← visited h
                       else do visit h
                               t' ← pruneBfs t
                               return $ h:t'
+
 
 prunePaths ∷ Int → Int → Forest Vertex → Forest Vertex
 prunePaths d n ts = runM n False $ chop d ts
