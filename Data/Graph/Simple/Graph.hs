@@ -26,7 +26,7 @@ module Data.Graph.Simple.Graph (
 
 -- * Searches
 , dfs, dff, dfsFiltered, bfs, reachable, paths, pathsN
-, pathTree, pathTreeN, treeToPaths, treeToMaxPaths
+, pathTree, pathTreeN, treeToPaths, treeToMaxPaths, shortestPaths
 
 
 -- * Pretty printing
@@ -234,8 +234,16 @@ isIsolate g v = (degree g v) == 0
 neighbors ∷ Graph → Vertex → [Vertex]
 neighbors g v = conList g V.! unVertex v
 
-connectedSubgraphs ∷ Graph → [Graph]
-connectedSubgraphs g = fmap (inducedSubgraph g . toList) $ dff g
+-- | Creates the connected components of the given graph
+--
+--   Since the numbering of the subgraphs might be different
+--   compared to the original graph, a mapping from the new to
+--   the old numbering is given with each graph.
+connectedSubgraphs ∷ Graph → [(Graph, V.Vector Vertex)]
+connectedSubgraphs g = case dff g of
+                         []  → []
+                         [_] → [(g, V.fromList $ vertices g)]
+                         f   → fmap (inducedSubgraph g . toList) f
                 
 
 reachable ∷ Graph → Vertex → [Vertex]
@@ -311,6 +319,20 @@ pathTreeN n g v = head $ prunePaths n (order g) [generate g v]
 paths ∷ Graph → Vertex → [[Vertex]]
 paths g = treeToPaths . pathTree g
 
+-- | Returns a shortest path to each connected
+--   vertex starting from a given vertex
+shortestPaths ∷ Graph → Vertex → [[Vertex]]
+shortestPaths g v = runM (order g) False $ do visit v
+                                              run [[v]]
+  where run   []   = return []
+        run   vss  = do res ← fmap concat $ traverse next vss
+                        add ← run res
+                        return $ vss ++ add
+        next   vs@(h:_) = fmap concat $ traverse (single vs) $ neighbors g h
+        single vs v'    = do vis ← visited v'
+                             if vis then return []
+                                    else do  visit v'
+                                             return [v':vs]
 
 -- | Returns all paths of a given length
 --   starting from a given vertex
@@ -358,8 +380,10 @@ edgesAt g v = fmap (edge v) $ neighbors g v
 --   those vertices.
 --
 --   Note that the numbering of vertices will be adjusted
---   in the new graph
-inducedSubgraph ∷ Graph → [Vertex] → Graph
+--   in the new graph, therefore a mapping from the new
+--   to the old numbering is returned together with the
+--   new graph
+inducedSubgraph ∷ Graph → [Vertex] → (Graph, V.Vector Vertex)
 inducedSubgraph g vs = let bm = boolMap (order g) vs
                        in  filterV ((bm UV.!) . unVertex) g
 
@@ -368,13 +392,16 @@ inducedSubgraph g vs = let bm = boolMap (order g) vs
 --   only the vertices fulfilling the given predicate
 --
 --   Note that the numbering of vertices will be adjusted
---   in the new graph
-filterV ∷ (Vertex → Bool) → Graph → Graph
-filterV p g      = fromEdges (length vs) es
+--   in the new graph, therefore a mapping from the new
+--   to the old numbering is returned together with the
+--   new graph
+filterV ∷ (Vertex → Bool) → Graph → (Graph, V.Vector Vertex)
+filterV p g      = (fromEdges (length vs) es, V.fromList vs)
     where es     = unsafeEdges . concatMap adjE $ edgeList g
 
           vs     = filter p (vertices g)
 
+          -- TODO Go from Map to Vector with dummy elements here
           vmap   = M.fromAscList $ vs `zip` [0..]
 
           adjV v = vmap M.! v

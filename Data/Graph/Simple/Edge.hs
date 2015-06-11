@@ -27,7 +27,7 @@ newtype Edge = Edge { unEdge ∷ Int }
   deriving (Eq, Ord, NFData)
 
 instance Show Edge where
-  show e = show (edgeX e) <> " <-> " <> show (edgeY e)
+  show e = show (edgeXInt e) <> " <-> " <> show (edgeYInt e)
 
 
 -- | Creates an edge from two vertices

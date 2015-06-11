@@ -22,6 +22,19 @@ Benchmark benchmark
 
   default-extensions:  UnicodeSyntax
 
+Benchmark profile
+  type:                exitcode-stdio-1.0
+  main-is:             benchmark/prof.hs
+  build-depends:       base, time, vector, safe, containers, deepseq
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+                       -O2
+                       -rtsopts
+                       -prof
+                       -fprof-auto
+
+  default-extensions:  UnicodeSyntax
+
 Test-Suite test-lgraph
   type:                exitcode-stdio-1.0
   main-is:             test.hs
@@ -39,7 +52,8 @@ Test-Suite test-lgraph
   default-extensions:  UnicodeSyntax
 
 library
-  exposed-modules:     Data.Graph.Simple.LGraph
+  exposed-modules:     Data.Graph.Graphs
+                       Data.Graph.Simple.LGraph
                        Data.Graph.Simple.Vertex
                        Data.Graph.Simple.Edge
                        Data.Graph.Simple.Graph

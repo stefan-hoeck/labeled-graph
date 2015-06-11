@@ -2,6 +2,7 @@
 
 module Main where
 
+import Control.DeepSeq (NFData, force)
 import Data.Graph.Cycles
 import Data.Graph.Simple.Graph
 import Data.Monoid ((<>))
@@ -10,20 +11,29 @@ import Data.Tree
 
 
 main ∷ IO ()
-main = let cs =  cyclicSubgraph strychnine
-       in  print $ length $ concatMap (cycles cs) $ vertices cs
+main = let test n = doBench "Shortest paths" n (chain n) benchShortestPaths
+       in  mapM_ test [10000,20000..1000000]
 
-benchConList ∷ Int → IO ()
-benchConList o = doBench "ConList" o f
-  where f o' = length $ neighbors (complete o') $ vertex 0
+-- benchConList ∷ Int → IO ()
+-- benchConList o = doBench "ConList" o f
+--   where f o' = length $ neighbors (complete o') $ vertex 0
 
-doBench ∷ Show a ⇒ String → a → (a → b) → IO ()
-doBench msg ini f = do
+benchShortestPaths ∷ Graph → Int
+benchShortestPaths = length . flip shortestPaths 0
+
+doBench ∷ (Show a, Show c, NFData b, NFData c) ⇒ String → a → b → (b → c) → IO ()
+doBench msg param b f = do
+  let !b' = force b
   start ← getCurrentTime
-  let !_ = f ini
+  let !c = force $ f b'
   end   ← getCurrentTime
   let diff = diffUTCTime end start
-  putStrLn $ msg <> " with param " <> show ini <> " took " <> show diff
+  putStrLn $ msg <> " with param " 
+                 <> show param
+                 <> " took " 
+                 <> show diff
+                 <> ": "
+                 <> show c
 
 testG ∷ Graph
 testG = fromList' [0 <-> 1, 1 <-> 2, 2 <-> 3, 1 <-> 4, 4 <-> 5,

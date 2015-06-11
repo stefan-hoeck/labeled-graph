@@ -79,12 +79,12 @@ prop_sum_of_degrees ∷ Graph → Bool
 prop_sum_of_degrees g = (sum $ degrees g) == (2 * size g)
 
 prop_connected_subgraph_orders ∷ Graph → Bool
-prop_connected_subgraph_orders g = let gs = connectedSubgraphs g
+prop_connected_subgraph_orders g = let gs = fmap fst $ connectedSubgraphs g
                                        o' = sum $ fmap order gs
                                    in  o' == order g
 
 prop_connected_subgraph_sizes ∷ Graph → Bool
-prop_connected_subgraph_sizes g = let gs = connectedSubgraphs g
+prop_connected_subgraph_sizes g = let gs = fmap fst $ connectedSubgraphs g
                                       s' = sum $ fmap size gs
                                   in  s' == size g
 
