@@ -2,9 +2,8 @@ module Data.Graph.Cycles (
   Cycle(edges)
 , mergeCycles
 , cyclomaticNumber, numberOfCycles
-, cyclicVertices, cycles, cyclesN, cyclicEdges
-, cyclicSubgraphs, cycleEdges
-, cyclesWithEdges, cyclesNWithEdges
+, cyclicVertices, cyclicEdges
+, cyclicSubgraphs, cycleBase, cycles
 ) where
 
 import Control.Monad (when, void)
@@ -14,7 +13,6 @@ import Data.Graph.Simple.Graph
 import Data.Graph.Simple.Util
 import Data.STRef.Strict
 
-import qualified Data.List as L
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 import qualified Data.Vector.Unboxed.Mutable as MVU
@@ -96,36 +94,17 @@ cyclicVertices ∷ Graph → [Vertex]
 cyclicVertices g = let cs = fst $ cvs g
                    in  filter ((cs UV.!) . unVertex) (vertices g)
 
-
-cycles ∷ Graph → Vertex → [[Vertex]]
-cycles g v = filter (keepCycle g v) $ paths g v
-
-
-cyclesWithEdges ∷ Graph → Vertex → [([Vertex],[Edge])]
-cyclesWithEdges g = fmap (\vs → (vs, cycleEdges vs)) . cycles g
-
-
-cyclesNWithEdges ∷ Int → Graph → Vertex → [([Vertex],[Edge])]
-cyclesNWithEdges i g = fmap (\vs → (vs, cycleEdges vs)) . cyclesN i g
-
-
-cyclesN ∷ Int → Graph → Vertex → [[Vertex]]
-cyclesN n g v = filter (keepCycle g v) $ pathsN n g v
-
-
-cycleEdges ∷ [Vertex] → [Edge]
-cycleEdges [] = []
-cycleEdges ts@(h:t) = zipWith edge ts (t ++ [h])
+cycleBase ∷ Graph → [[Vertex]]
+cycleBase g = let csub = fromList (order g) (cyclicEdges g)
+                  cfor = cycleForest csub
+                  ps   = concatMap treeToMaxPaths cfor
+                  toCycle (h:t) = h : (takeWhile (h /=) t)
+                  toCycle []    = error "oops"
+              in filter ((2 <) . length) $ fmap toCycle ps
 
 ----------------------------------------------------------------------
 -- Algorithms
 
-keepCycle ∷ Graph → Vertex → [Vertex] → Bool
-keepCycle g v (v':t@(_:_:_)) | adjacent g v v'  = keep t
-                          where keep (v'':_:[]) = v'' > v'
-                                keep (_:t')     = keep t'
-                                keep _          = error "not possible"
-keepCycle _ _ _                                 = False
 
 cvs ∷ Graph → (UV.Vector Bool, [Edge])
 cvs g = let o = order g
@@ -218,3 +197,30 @@ cvs g = let o = order g
 --                    mapM_ check $ vertices g
 -- 
 --                    UV.unsafeFreeze cs
+
+cycles ∷ Graph → Vertex → [[Vertex]]
+cycles g v = filter (keepCycle g v) $ paths g v
+
+
+-- cyclesWithEdges ∷ Graph → Vertex → [([Vertex],[Edge])]
+-- cyclesWithEdges g = fmap (\vs → (vs, cycleEdges vs)) . cycles g
+-- 
+-- 
+-- cyclesNWithEdges ∷ Int → Graph → Vertex → [([Vertex],[Edge])]
+-- cyclesNWithEdges i g = fmap (\vs → (vs, cycleEdges vs)) . cyclesN i g
+-- 
+-- 
+-- cyclesN ∷ Int → Graph → Vertex → [[Vertex]]
+-- cyclesN n g v = filter (keepCycle g v) $ pathsN n g v
+-- 
+-- 
+-- cycleEdges ∷ [Vertex] → [Edge]
+-- cycleEdges [] = []
+-- cycleEdges ts@(h:t) = zipWith edge ts (t ++ [h])
+--
+keepCycle ∷ Graph → Vertex → [Vertex] → Bool
+keepCycle g v (v':t@(_:_:_)) | adjacent g v v'  = keep t
+                          where keep (v'':_:[]) = v'' > v'
+                                keep (_:t')     = keep t'
+                                keep _          = error "not possible"
+keepCycle _ _ _                                 = False

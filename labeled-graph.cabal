@@ -53,11 +53,12 @@ Test-Suite test-lgraph
 
 library
   exposed-modules:     Data.Graph.Graphs
-                       Data.Graph.Simple.LGraph
-                       Data.Graph.Simple.Vertex
+                       Data.Graph.Cycles
+                       Data.Queue
                        Data.Graph.Simple.Edge
                        Data.Graph.Simple.Graph
-                       Data.Graph.Cycles
+                       Data.Graph.Simple.LGraph
+                       Data.Graph.Simple.Vertex
 
   other-modules:       Data.Graph.Simple.Util
 

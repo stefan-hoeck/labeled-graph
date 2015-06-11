@@ -27,6 +27,7 @@ module Data.Graph.Simple.Graph (
 -- * Searches
 , dfs, dff, dfsFiltered, bfs, reachable, paths, pathsN
 , pathTree, pathTreeN, treeToPaths, treeToMaxPaths, shortestPaths
+, generateTree, generateForest, cycleForest
 
 
 -- * Pretty printing
@@ -266,7 +267,7 @@ isConnected g = case dff g of
 --
 --   Runs in O(|V|+|E|) time
 dfs ∷ Graph → [Vertex] → Forest Vertex
-dfs g vs = pruneDfs (order g) (map (generate g) vs)
+dfs g vs = pruneDfs (order g) (fmap (generateTree g) vs)
 
 
 -- | Depth first search ignoring nodes
@@ -291,8 +292,11 @@ dff ∷ Graph → Forest Vertex
 dff g = dfs g (vertices g)
 
 
-generate ∷ Graph → Vertex → Tree Vertex
-generate g v  = Node v $ map (generate g) (neighbors g v)
+generateTree ∷ Graph → Vertex → Tree Vertex
+generateTree g v  = Node v $ map (generateTree g) (neighbors g v)
+
+generateForest ∷ Graph → Forest Vertex
+generateForest g = fmap (generateTree g) $ vertices g
 
 
 bfs ∷ Graph → Vertex → [[Vertex]]
@@ -312,12 +316,16 @@ pathTree = pathTreeN (-1)
 -- | Creates a tree of paths up to the given number of
 --   vertices starting from the vertex given
 pathTreeN ∷ Int → Graph → Vertex → Tree Vertex
-pathTreeN n g v = head $ prunePaths n (order g) [generate g v]
+pathTreeN n g v = head $ prunePaths n (order g) [generateTree g v]
 
 
 -- | Returns all paths starting from a given vertex
 paths ∷ Graph → Vertex → [[Vertex]]
 paths g = treeToPaths . pathTree g
+
+
+cycleForest ∷ Graph → Forest Vertex
+cycleForest g = pruneDangling (order g) $ generateForest g
 
 -- | Returns a shortest path to each connected
 --   vertex starting from a given vertex
@@ -329,6 +337,7 @@ shortestPaths g v = runM (order g) False $ do visit v
                         add ← run res
                         return $ vss ++ add
         next   vs@(h:_) = fmap concat $ traverse (single vs) $ neighbors g h
+        next   []       = error "oops"
         single vs v'    = do vis ← visited v'
                              if vis then return []
                                     else do  visit v'
@@ -458,6 +467,23 @@ pruneDfs n ts = runM n False (chop ts)
                                        as ← chop ts'
                                        bs ← chop us
                                        return (Node v as : bs)
+
+pruneDangling ∷ Int → Forest Vertex → Forest Vertex
+pruneDangling n ts = runM n False (chop (-1) (-1) ts)
+  where  chop _ _ []                 = return []
+         chop p p' (Node v ts' : us) = do vis ← visited v
+                                          let v' = unVertex v
+                                          if vis 
+                                          then do
+                                            bs ← chop p p' us
+                                            if p == (-1) || p == v'
+                                            then return bs
+                                            else return (Node v [] : bs)
+                                          else do 
+                                            visit v
+                                            as ← chop p' v' ts'
+                                            bs ← chop p  p' us
+                                            return (Node v as : bs)
 
 
 pruneBfs ∷ [Vertex] → SetM e Bool [Vertex]

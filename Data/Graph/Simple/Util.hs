@@ -3,6 +3,7 @@
 
 module Data.Graph.Simple.Util (
   unique, sortedUnique, rightPad
+, sortedDiff
 
 , unsafeReadV, unsafeReadVU
 , unsafeWriteV, unsafeWriteVU
@@ -40,6 +41,16 @@ rightPad a as = fmap pad as
     where pad as' = as' ++ replicate (ml - length as') a
           ml      = maximum $ fmap length as
 
+-- | Subtracts the conten of the second from the first
+--   list. Lists are assumed to set-like: Sorted and
+--   holding each element only once
+sortedDiff ∷ Ord a ⇒ [a] → [a] → [a]
+sortedDiff = run []
+  where run r [] _                            = reverse r
+        run r as []                           = reverse r ++ as
+        run r as@(a:ta) bs@(b:tb) | a == b    = run r     ta tb
+                                  | a <  b    = run (a:r) ta bs
+                                  | otherwise = run r     as tb
 
 -- | Modfies a value in a mutable array without checking
 --   the index first
