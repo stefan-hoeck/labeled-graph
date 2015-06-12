@@ -10,8 +10,8 @@ import Data.Time.Clock
 
 
 main ∷ IO ()
-main = doBench "Cycles" "strychnine" pinene (many 1000 cyclesBrute) >>
-       doBench "Cycle base" "strychnine" pinene (many 1000 bcycleBase)
+main = doBench "Cycles" "strychnine" strychnine (many 1000 cyclesBrute) >>
+       doBench "Cycle base" "strychnine" strychnine (many 100000 bcycleBase)
 
 -- benchConList ∷ Int → IO ()
 -- benchConList o = doBench "ConList" o f

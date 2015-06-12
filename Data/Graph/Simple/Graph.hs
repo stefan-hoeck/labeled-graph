@@ -42,6 +42,7 @@ module Data.Graph.Simple.Graph (
 ) where
 
 import Control.DeepSeq (NFData)
+import Control.Monad (liftM2)
 import Control.Monad.ST (runST)
 import Data.Foldable (forM_, toList)
 import Data.Graph.Simple.Edge
@@ -455,35 +456,32 @@ edgesToConList o es = runST $ do
   V.unsafeFreeze v
 
 
+combF ∷ a → Forest a → Forest a → Forest a
+combF a fa fb = (Node a fa) : fb
+
 pruneDfs ∷ Int → Forest Vertex → Forest Vertex
-pruneDfs n ts = runM n False (chop ts)
-  where  chop []       = return []
-         chop (Node v ts' : us) = do vis ← visited v
-                                     if vis 
-                                     then 
-                                       chop us
-                                     else do 
-                                       visit v
-                                       as ← chop ts'
-                                       bs ← chop us
-                                       return (Node v as : bs)
+pruneDfs n f = runM n False (chop f) where  
+  chop []               = return []
+  chop (Node v f' : us) = let us'  = chop us
+                              f''  = chop f'
+                              nvis = visit v >> liftM2 (combF v) f'' us'
+                          in  ifM (visited v) us' nvis
+
 
 pruneDangling ∷ Int → Forest Vertex → Forest Vertex
-pruneDangling n ts = runM n False (chop (-1) (-1) ts)
-  where  chop _ _ []                 = return []
-         chop p p' (Node v ts' : us) = do vis ← visited v
-                                          let v' = unVertex v
-                                          if vis 
-                                          then do
-                                            bs ← chop p p' us
-                                            if p == (-1) || p == v'
-                                            then return bs
-                                            else return (Node v [] : bs)
-                                          else do 
-                                            visit v
-                                            as ← chop p' v' ts'
-                                            bs ← chop p  p' us
-                                            return (Node v as : bs)
+pruneDangling n f = runM n False (chop (-1) (-1) f) where  
+  chop _ _ []                 = return []
+  chop p p' (Node v f' : us) = let v'   = unVertex v
+                                   f''  = chop p' v' f'
+                                   us'  = chop p  p' us
+                                   keep = fmap (combF v []) us'
+
+                                   vis  = if p == (-1) || p == v'
+                                            then us'
+                                            else keep
+                                   nvis = visit v >> liftM2 (combF v) f'' us'
+                                    
+                               in  ifM (visited v) vis nvis
 
 
 pruneBfs ∷ [Vertex] → SetM e Bool [Vertex]
