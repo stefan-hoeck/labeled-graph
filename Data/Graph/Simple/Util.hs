@@ -1,17 +1,37 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Data.Graph.Simple.Util (
-  unique, sortedUnique, rightPad
-, sortedDiff
+{- |
+Module        : Data.Graph.Simple.Util
+Description   : Utility functions used in many algorithms in this library
+Copyright     : ZHAW Zurich University of Applied Sciences
+Maintainer    : Stefan Höck
+Stability     : experimental
 
+This module is exported in order to be able to test
+the functions it provides. Most functions in here are only
+for internal use and are not total, so use them with care
+in your own code.
+-}
+module Data.Graph.Simple.Util (
+
+-- * Monad utility functions
+  ifM, whenM, unlessM
+
+-- * Operations on sorted lists without dublicates
+, unique, sortedUnique, sortedDiff, sortedUnion
+
+-- * Pretty printing
+, rightPad
+
+-- * Mutable vector utility functions
 , unsafeReadV, unsafeReadVU
 , unsafeWriteV, unsafeWriteVU
 , unsafeModU, unsafeMod, unsafeModV, unsafeModVU
 
-, ifM, whenM, unlessM
 
 , boolMap
+
 , SetM(..), runM, runMV, setM, getM, modM, visit, visited, unvisit
 ) where
 
@@ -22,6 +42,28 @@ import Data.List (sort)
 import qualified Data.Vector.Mutable as MV
 import qualified Data.Vector.Unboxed.Mutable as MVU
 import qualified Data.Vector.Unboxed as VU
+
+
+-- * Monad utility functions
+
+-- | Depending on the 'Bool' returned by the first monadic
+--   action, either performs the second (in case of 'True')
+--   or the third provided action.
+ifM ∷ Monad m ⇒ m Bool → m a → m a → m a
+ifM mb m1 m2 = mb >>= (\b → if b then m1 else m2)
+
+-- | Like 'when' but with a monadic 'Bool' as its first argument
+whenM ∷ Monad m ⇒ m Bool → m () → m ()
+whenM mb mu = mb >>= (\b → when b mu)
+
+-- | Like 'unless' but with a monadic 'Bool' as its first argument
+unlessM ∷ Monad m ⇒ m Bool → m () → m ()
+unlessM mb mu = mb >>= (\b → unless b mu)
+
+
+
+
+-- * Operations on sorted lists without dublicates
 
 -- | Sorts a list and removes duplicates
 sortedUnique ∷ Ord a ⇒ [a] → [a]
@@ -35,14 +77,9 @@ unique = run [] where
   run r (h:t)            = run (h:r) t
   run r []               = reverse r
 
-rightPad ∷ a → [[a]] → [[a]]
-rightPad _ [] = []
-rightPad a as = fmap pad as
-    where pad as' = as' ++ replicate (ml - length as') a
-          ml      = maximum $ fmap length as
 
--- | Subtracts the conten of the second from the first
---   list. Lists are assumed to set-like: Sorted and
+-- | Subtracts the content of the second from the first
+--   list in O(m+n). Lists are assumed to be set-like: Sorted and
 --   holding each element only once
 sortedDiff ∷ Ord a ⇒ [a] → [a] → [a]
 sortedDiff = run []
@@ -52,17 +89,44 @@ sortedDiff = run []
                                   | a <  b    = run (a:r) ta bs
                                   | otherwise = run r     as tb
 
--- | Modfies a value in a mutable array without checking
+
+-- | Combines the content of two lists in O(m+n).
+--   Lists are assumed to be set-like: Sorted and
+--   holding each element only once
+sortedUnion ∷ Ord a ⇒ [a] → [a] → [a]
+sortedUnion = run []
+  where run r [] bs                           = reverse r ++ bs
+        run r as []                           = reverse r ++ as
+        run r as@(a:ta) bs@(b:tb) | a <=  b   = run (a:r) ta bs
+                                  | otherwise = run r     as tb
+
+
+
+-- * Pretty printing
+
+rightPad ∷ a → [[a]] → [[a]]
+rightPad _ [] = []
+rightPad a as = fmap pad as
+    where pad as' = as' ++ replicate (ml - length as') a
+          ml      = maximum $ fmap length as
+
+
+
+-- * Mutable vector utility functions
+
+-- | Modfies a value in a mutable unboxed array without checking
 --   the index first
 {-# INLINE unsafeModU #-}
 unsafeModU ∷ MVU.Unbox a ⇒ MVU.MVector s a → Int → (a → a) → ST s ()
 unsafeModU v i f = MVU.unsafeRead v i >>= MVU.unsafeWrite v i . f
 
--- | Modfies a value in a mutable array without checking
+
+-- | Modfies a value in a mutable unboxed array without checking
 --   the index first. Uses a Vertex for indexing
 {-# INLINE unsafeModVU #-}
 unsafeModVU ∷ MVU.Unbox a ⇒ MVU.MVector s a → Vertex → (a → a) → ST s ()
 unsafeModVU v i f = unsafeReadVU v i >>= unsafeWriteVU v i . f
+
 
 -- | Modfies a value in a mutable array without checking
 --   the index first
@@ -70,39 +134,45 @@ unsafeModVU v i f = unsafeReadVU v i >>= unsafeWriteVU v i . f
 unsafeMod ∷ MV.MVector s a → Int → (a → a) → ST s ()
 unsafeMod v i f = MV.unsafeRead v i >>= MV.unsafeWrite v i . f
 
+
 -- | Modfies a value in a mutable array without checking
 --   the index first. Uses a Vertex for indexing
 {-# INLINE unsafeModV #-}
 unsafeModV ∷ MV.MVector s a → Vertex → (a → a) → ST s ()
 unsafeModV v i f = unsafeReadV v i >>= unsafeWriteV v i . f
 
+
+-- | Extracts the value from a mutable array without
+--   checking the index first. Uses a Vertex for indexing.
 {-# INLINE unsafeReadV #-}
 unsafeReadV ∷ MV.MVector s a → Vertex → ST s a
 unsafeReadV v = MV.unsafeRead v . unVertex
 
+
+-- | Extracts the value from a mutable unboxed array without
+--   checking the index first. Uses a Vertex for indexing.
 {-# INLINE unsafeReadVU #-}
 unsafeReadVU ∷ MVU.Unbox a ⇒ MVU.MVector s a → Vertex → ST s a
 unsafeReadVU v = MVU.unsafeRead v . unVertex
 
+
+-- | Writes a value to a mutable array without
+--   checking the index first. Uses a Vertex for indexing.
 {-# INLINE unsafeWriteV #-}
 unsafeWriteV ∷ MV.MVector s a → Vertex → a → ST s ()
 unsafeWriteV v i a = MV.unsafeWrite v (unVertex i) a
 
+
+-- | Writes a value to a mutable unboxed array without
+--   checking the index first. Uses a Vertex for indexing.
 {-# INLINE unsafeWriteVU #-}
 unsafeWriteVU ∷ MVU.Unbox a ⇒ MVU.MVector s a → Vertex → a → ST s ()
 unsafeWriteVU v i a = MVU.unsafeWrite v (unVertex i) a
 
+
 boolMap ∷ Int → [Vertex] → VU.Vector Bool
 boolMap n vs = runMV n False $ mapM_ visit vs
 
-ifM ∷ Monad m ⇒ m Bool → m a → m a → m a
-ifM mb m1 m2 = mb >>= (\b → if b then m1 else m2)
-
-whenM ∷ Monad m ⇒ m Bool → m () → m ()
-whenM mb mu = mb >>= (\b → when b mu)
-
-unlessM ∷ Monad m ⇒ m Bool → m () → m ()
-unlessM mb mu = mb >>= (\b → unless b mu)
 
 -- Used to mark or count visited vertices in graph algorithms
 newtype SetM s u a = SetM { runSetM ∷ MVU.MVector s u → ST s a }

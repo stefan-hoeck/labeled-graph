@@ -5,7 +5,7 @@ module Data.Graph.Simple.Edge (
 
 , edgeX, edgeY, edgeXInt, edgeYInt
 , edge, edgeMay, unsafeEdge, (<->)
-, connects, transformEdge, edgeVertices
+, connects, edgeVertices
 , edgesAdjacent, edgesSize
 , edgesNull, filterEdges
 
@@ -23,6 +23,11 @@ import Safe (maximumMay, minimumMay)
 -- ** Edge ** --
 --
 
+-- | An edge in a simple graph
+--
+--   Internally, the edge is stored as an int using
+--   modular arithmetik to extraxt the two vertices from
+--   it. This leads to a very compact representation.
 newtype Edge = Edge { unEdge ∷ Int }
   deriving (Eq, Ord, NFData)
 
@@ -52,12 +57,12 @@ vmod = 1 + (unVertex maxVertex)
 unsafeEdge ∷ Vertex → Vertex → Edge
 unsafeEdge v1 v2 = Edge $ (unVertex v1) * vmod + (unVertex v2)
 
+-- | Creates an edge from tow integers
+--
+--   Throws an error if the integers are equal or
+--   do not represent valid vertices.
 (<->) ∷ Int → Int → Edge
 x <-> y = edge (vertex x) (vertex y)
-
-
-transformEdge ∷ (Vertex → Vertex) → Edge → Edge
-transformEdge f e = edge (f $ edgeX e) (f $ edgeY e)
 
 
 -- | Returns the smaller of the two vertices connected
@@ -84,6 +89,7 @@ edgeYInt ∷ Edge → Int
 edgeYInt = unVertex . edgeY
 
 
+-- | Returns the two vertices connected by an edge in a list
 edgeVertices ∷ Edge → [Vertex]
 edgeVertices e = [edgeX e, edgeY e]
 
@@ -92,24 +98,30 @@ edgeVertices e = [edgeX e, edgeY e]
 connects ∷ Edge → Vertex → Bool
 connects e v = v == (edgeX e) || v == (edgeY e)
 
--- | True if the two edges share an end point
-edgesAdjacent ∷ Edge → Edge → Bool
-edgesAdjacent e1 e2 = connects e2 (edgeX e1) || connects e2 (edgeY e1)
 
+-- | True if the two edges share an end point and are not equal
+edgesAdjacent ∷ Edge → Edge → Bool
+edgesAdjacent e1 e2 = e1 /= e2 &&
+                      (connects e2 (edgeX e1) || connects e2 (edgeY e1))
 
 
 -- | A wrapper for sorted lists of edges without dublicates
 newtype Edges = Edges { unEdges ∷ [Edge] }
   deriving (Show, Eq, Ord, NFData)
 
+
 -- | Wraps a list of edges without sorting or checking
 --   for dublicates
-{-# INLINE unsafeEdges #-}
+--
+--   USE WITH CARE: Call this function only if you know that your list
+--   of edges is sorted and without dublicates
 unsafeEdges ∷ [Edge] → Edges
 unsafeEdges = Edges
 
+-- | The empty list of edges
 emptyEdges ∷ Edges
 emptyEdges = Edges []
+
 
 edgesFromList ∷ [Edge] → Edges
 edgesFromList = Edges . sortedUnique
