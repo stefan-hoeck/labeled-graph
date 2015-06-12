@@ -53,14 +53,18 @@ Test-Suite test-lgraph
 
 library
   exposed-modules:     Data.Graph.Graphs
+                       Data.Graph.Simple
                        Data.Graph.Cycles
                        Data.Queue
                        Data.Graph.Simple.Edge
                        Data.Graph.Simple.Graph
                        Data.Graph.Simple.LGraph
                        Data.Graph.Simple.Vertex
+                       Data.Graph.Simple.Query
 
   other-modules:       Data.Graph.Simple.Util
+                       Data.Graph.Simple.Query.Dfs
+                       Data.Graph.Simple.Query.Bfs
 
   build-depends:       base         >= 4.7
                      , containers   >= 0.5.5

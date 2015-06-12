@@ -3,7 +3,7 @@
 {- |
 Module        : Data.Graph.Simple.Vertex
 Description   : Newtype wrapper for graph vertices
-Copyright     : ZHAW Zurich University of Applied Sciences
+Copyright     : Stefan Höck
 Maintainer    : Stefan Höck
 Stability     : experimental
 

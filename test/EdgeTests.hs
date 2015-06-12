@@ -49,12 +49,6 @@ prop_edgeYInt ∷ Vertex → Vertex → Property
 prop_edgeYInt v1 v2 = v1 /= v2 ==> edgeYInt (edge v1 v2) ==
                                    unVertex (max v1 v2)
 
-prop_transformEdge ∷ SmallEdge → Bool
-prop_transformEdge (SmallEdge e) = let e'  = transformEdge (+1) e
-                                       vs  = edgeVertices e
-                                       vs' = edgeVertices e'
-                                   in fmap (+1) vs == vs'
-
 prop_edgeVertices ∷ Vertex → Vertex → Property
 prop_edgeVertices v1 v2 = v1 /= v2 ==> sort [v1,v2] ==
                                        edgeVertices (edge v1 v2)

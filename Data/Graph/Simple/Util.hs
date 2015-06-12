@@ -4,7 +4,7 @@
 {- |
 Module        : Data.Graph.Simple.Util
 Description   : Utility functions used in many algorithms in this library
-Copyright     : ZHAW Zurich University of Applied Sciences
+Copyright     : Stefan Höck
 Maintainer    : Stefan Höck
 Stability     : experimental
 

@@ -3,7 +3,7 @@
 {- |
 Module        : Data.Graph.Simple.Edge
 Description   : Undirected edges in simple graphs
-Copyright     : ZHAW Zurich University of Applied Sciences
+Copyright     : Stefan Höck
 Maintainer    : Stefan Höck
 Stability     : experimental
 
