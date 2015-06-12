@@ -8,7 +8,8 @@ cabal sandbox delete
 cabal sandbox init
 
 # Install dependencies, configure and build
+cabal install -j --disable-tests criterion -O2
 cabal install -j --dependencies --enable-tests -O2
-cabal configure --enable-tests -O2
+cabal configure  --enable-tests -O2
 cabal -j build
 cabal test

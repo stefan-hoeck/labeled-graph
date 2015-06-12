@@ -2,44 +2,32 @@
 
 module Main where
 
---import Control.DeepSeq (NFData, force)
---import Data.Graph.Simple.Graph
---import Data.Graph.Graphs
---import Data.Monoid ((<>))
---import Data.Time.Clock
+import Criterion.Main
+import Data.Graph.Simple
 
 
 main ∷ IO ()
-main = return () --doBench "Cycles" "strychnine" strychnine (many 1000 cyclesBrute) >>
-       --doBench "Cycle base" "strychnine" strychnine (many 100000 bcycleBase)
+main = defaultMain [
+         bgroup "dfs_complete" $ fmap b_dfs_c    [100,1000]
+       , bgroup "dff_complete" $ fmap b_dff_c    [100,1000]
+       , bgroup "dfs_empty"    $ fmap b_dfs_e    [100,1000]
+       , bgroup "dff_empty"    $ fmap b_dff_e    [100,1000]
+       , bgroup "complete"     $ fmap b_complete [100,1000]
+       ]
 
--- benchConList ∷ Int → IO ()
--- benchConList o = doBench "ConList" o f
---   where f o' = length $ neighbors (complete o') $ vertex 0
+b_dfs_c ∷ Int → Benchmark
+b_dfs_c n = bench (show n) $ nf (dfs $ complete n) [0]
 
--- benchShortestPaths ∷ Graph → Int
--- benchShortestPaths = length . flip shortestPaths 0
--- 
--- many ∷ Int → (a → Int) → a → Int
--- many 0 _ _ = 0
--- many n f a = f a + many (n-1) f a
--- 
--- cyclesBrute ∷ Graph → Int
--- cyclesBrute g = length $ concatMap (cycles g) $ vertices g
--- 
--- bcycleBase ∷ Graph → Int
--- bcycleBase = length . cycleBase
--- 
--- doBench ∷ (Show a, Show c, NFData b, NFData c) ⇒ String → a → b → (b → c) → IO ()
--- doBench msg param b f = do
---   let !b' = force b
---   start ← getCurrentTime
---   let !c = force $ f b'
---   end   ← getCurrentTime
---   let diff = diffUTCTime end start
---   putStrLn $ msg <> " with param " 
---                  <> show param
---                  <> " took " 
---                  <> show diff
---                  <> ": "
---                  <> show c
+b_dff_c ∷ Int → Benchmark
+b_dff_c n = bench (show n) $ nf (dff $ complete n) [0]
+
+b_dfs_e ∷ Int → Benchmark
+b_dfs_e n = let e = empty n
+            in bench (show n) $ nf (dfs e) (vertices e)
+
+b_dff_e ∷ Int → Benchmark
+b_dff_e n = let e = empty n
+            in bench (show n) $ nf (dff e) (vertices e)
+
+b_complete ∷ Int → Benchmark
+b_complete n = bench (show n) $ nf complete n
