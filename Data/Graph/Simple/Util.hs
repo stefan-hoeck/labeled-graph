@@ -8,10 +8,7 @@ Copyright     : ZHAW Zurich University of Applied Sciences
 Maintainer    : Stefan Höck
 Stability     : experimental
 
-This module is exported in order to be able to test
-the functions it provides. Most functions in here are only
-for internal use and are not total, so use them with care
-in your own code.
+Functions for internals use. Many are not total so use with care.
 -}
 module Data.Graph.Simple.Util (
 

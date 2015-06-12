@@ -1,4 +1,4 @@
--- * Samples of graphs useful for testing
+--   Samples of graphs useful for testing
 --   Many examples come from organic chemistry. These were generated
 --   from SMILES strings using a smiles parser which generates
 --   LGraphs
