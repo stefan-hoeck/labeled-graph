@@ -56,7 +56,7 @@ reachable g v = head $ dfs g [v]
 --
 --   Runs in O(|V|+|E|) time
 isConnected ∷ Graph → Bool
-isConnected g = order g == (length $ reachable g 0)
+isConnected g = isNull g || order g == (length $ reachable g 0)
 
 
 -- | Creates the connected components of the given graph.

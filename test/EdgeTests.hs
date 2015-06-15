@@ -63,8 +63,8 @@ prop_connects v1 v2 = let e = edge v1 v2
 prop_connects_other ∷ Edge → Vertex → Bool
 prop_connects_other e v = e `connects` v == (v `elem` edgeVertices e)
 
-prop_edgeAdjacent_self_true ∷ Edge → Bool
-prop_edgeAdjacent_self_true e = edgesAdjacent e e
+prop_edgeAdjacent_self_false ∷ Edge → Bool
+prop_edgeAdjacent_self_false e = not $ edgesAdjacent e e
 
 prop_edgeAdjacent ∷ Edge → Edge → Bool
 prop_edgeAdjacent e1 e2 = let vs1 = edgeVertices e1
