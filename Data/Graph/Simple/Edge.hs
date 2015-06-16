@@ -50,11 +50,11 @@ module Data.Graph.Simple.Edge (
 ,  filterEdges
 
 -- ** Set operations
-,  edgesUnion, edgesDifference
+,  edgesUnion, edgesDifference, edgesSymmetricDifference
 ) where
 
 import Control.DeepSeq (NFData)
-import Data.Graph.Simple.Util (sortedUnique, sortedUnion, sortedDiff)
+import Data.Graph.Simple.Util
 import Data.Graph.Simple.Vertex (Vertex, unVertex, maxVertex, vertex)
 import Data.Monoid ((<>))
 import Safe (maximumMay, minimumMay)
@@ -246,3 +246,10 @@ Edges a `edgesUnion` Edges b = Edges $ sortedUnion a b
 --   the first set
 edgesDifference ∷ Edges → Edges → Edges
 Edges a `edgesDifference` Edges b = Edges $ sortedDiff a b
+
+
+-- | Returns the union of two sets of edges from which
+--   the intersection (common edges) of the two sets is
+--   removed.
+edgesSymmetricDifference ∷ Edges → Edges → Edges
+Edges a `edgesSymmetricDifference` Edges b = Edges $ sortedSymmDiff a b

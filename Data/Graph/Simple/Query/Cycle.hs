@@ -2,7 +2,9 @@ module Data.Graph.Simple.Query.Cycle (
   cyclicEdges, cyclicVertices, cyclicSubgraph
 , cyclomaticNumber, numberOfCycles
 , cycleBases
-, nonSpanningEdges
+, cycles
+, allCycles
+, isElementary
 ) where
 
 import Control.Monad (when)
@@ -68,6 +70,34 @@ cycleBases ∷ Graph → [[Edges]]
 cycleBases g = let g'    = cyclicSubgraph g
                    paths = bfs g' (vertices g')
                in  filter (not . null) $ fmap (cycleBase' g') paths
+
+
+-- | True if the given list of edges represents an elementary
+--   cycle
+isElementary ∷ Edges → Bool
+isElementary = run . fmap (\e → (edgeX e, edgeY e)) . unEdges
+  where run []                                 = False
+        run [(a,b)]                            = a == b
+        run ((a,b):(c,d):t) | a /= b && a == c = run $ insert (b,d) t
+                            | otherwise        = False
+
+        insert p t = let (a,b) = span (p >=) t
+                     in  a ++ (p : b)
+        
+
+-- | Enumerates all elementary cycles of a graph
+cycles ∷ Graph → [Edges]
+cycles = filter isElementary . allCycles
+
+
+-- | Enumerates all cycles of a graph
+allCycles ∷ Graph → [Edges]
+allCycles = concatMap fromBase . cycleBases
+  where fromBase []    = []
+        fromBase (h:t) = let merge = edgesSymmetricDifference h
+                             rest  = fromBase t
+                         in  h : rest ++ fmap merge rest
+        
 
 ----------------------------------------------------------------------
 -- Algorithms

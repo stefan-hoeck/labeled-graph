@@ -16,7 +16,7 @@ module Data.Graph.Simple.Util (
   ifM, whenM, unlessM
 
 -- * Operations on sorted lists without dublicates
-, unique, sortedUnique, sortedDiff, sortedUnion
+, unique, sortedUnique, sortedDiff, sortedUnion, sortedSymmDiff
 
 -- * Pretty printing
 , rightPad
@@ -98,6 +98,17 @@ sortedUnion = run []
         run r as []                           = reverse r ++ as
         run r as@(a:ta) bs@(b:tb) | a <=  b   = run (a:r) ta bs
                                   | otherwise = run r     as tb
+
+-- | Creates the symmetric set difference of to lists.
+--   Lists are assumed to be set-like: Sorted and
+--   holding each element only once
+sortedSymmDiff ∷ Ord a ⇒ [a] → [a] → [a]
+sortedSymmDiff = run []
+  where run r [] e2                           = reverse r ++ e2
+        run r e1 []                           = run r     [] e1
+        run r as@(a:ta) bs@(b:tb) | a == b    = run r     ta tb
+                                  | a <  b    = run (a:r) ta bs
+                                  | otherwise = run (b:r) as tb
 
 
 
