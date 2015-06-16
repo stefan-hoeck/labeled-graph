@@ -41,17 +41,20 @@ module Data.Graph.Simple.Edge (
 
 -- ** Construction
 ,  unsafeEdges, emptyEdges, edgesFromList
-,  completeEdges, chainEdges
+,  completeEdges, chainEdges, edgesFromVertices
 
 -- ** Properties of edge lists
 ,  edgesSize, edgesNull,  maximumV, minimumV
 
 -- ** Filtering edges
 ,  filterEdges
+
+-- ** Set operations
+,  edgesUnion, edgesDifference
 ) where
 
 import Control.DeepSeq (NFData)
-import Data.Graph.Simple.Util (sortedUnique)
+import Data.Graph.Simple.Util (sortedUnique, sortedUnion, sortedDiff)
 import Data.Graph.Simple.Vertex (Vertex, unVertex, maxVertex, vertex)
 import Data.Monoid ((<>))
 import Safe (maximumMay, minimumMay)
@@ -183,6 +186,12 @@ emptyEdges = Edges []
 edgesFromList ∷ [Edge] → Edges
 edgesFromList = Edges . sortedUnique
 
+-- | Takes a list of vertices and creates edges between
+--   successors in this list.
+edgesFromVertices ∷ [Vertex] → Edges
+edgesFromVertices []       = emptyEdges 
+edgesFromVertices vs@(_:t) = edgesFromList $ zipWith edge vs t
+
 
 -- | Returns the edges of a complete graph of the given order
 completeEdges ∷ Int → Edges
@@ -218,7 +227,22 @@ minimumV = minimumMay . fmap edgeX . unEdges
 
 
 
+
 -- ** Filtering edges
 
 filterEdges ∷ (Edge → Bool) → Edges → Edges
 filterEdges p = Edges . filter p . unEdges
+
+
+
+-- ** Set operations
+
+-- | Returns the union of two sets of edges
+edgesUnion ∷ Edges → Edges → Edges
+Edges a `edgesUnion` Edges b = Edges $ sortedUnion a b
+
+
+-- | Removes the edges in the second set from those in
+--   the first set
+edgesDifference ∷ Edges → Edges → Edges
+Edges a `edgesDifference` Edges b = Edges $ sortedDiff a b
