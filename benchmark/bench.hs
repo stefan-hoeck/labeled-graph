@@ -4,13 +4,15 @@ module Main where
 
 import Criterion.Main
 import Data.Graph.Simple
+import Data.Graph.Graphs (strychnine)
 
 
 main ∷ IO ()
 main = defaultMain [
          dfs_group
        , bfs_group
-       ]
+       , cycle_group]
+
 
 ----------------------------------------------------------------------
 -- Depth first search
@@ -39,6 +41,7 @@ b_dff_e ∷ Int → Benchmark
 b_dff_e n = let e = empty n
             in bench (show n) $ nf (dff e) (vertices e)
 
+
 ----------------------------------------------------------------------
 -- Breadth first search
 
@@ -56,7 +59,7 @@ b_bfs_c n = let c = complete n
 
 b_bfp_c ∷ Int → Benchmark
 b_bfp_c n = let c = complete n
-            in  bench (show n) $ nf (bfPaths c) 0
+            in  bench (show n) $ nf (bfPaths c) (vertices c)
 
 b_bfs_e ∷ Int → Benchmark
 b_bfs_e n = let e = empty n
@@ -64,4 +67,22 @@ b_bfs_e n = let e = empty n
 
 b_bfp_e ∷ Int → Benchmark
 b_bfp_e n = let e = empty n
-            in bench (show n) $ nf (bfPaths e) 0
+            in bench (show n) $ nf (bfPaths e) (vertices e)
+
+
+----------------------------------------------------------------------
+-- Cycles
+
+cycle_group ∷ Benchmark
+cycle_group = bgroup "cycles" [
+                bgroup "complete" $ fmap b_cycleBase_c [10,100,1000]
+              , bgroup "strych"   $ fmap b_cycleBase_s [10,100,1000]]
+
+b_cycleBase_c ∷ Int → Benchmark
+b_cycleBase_c n = let c = complete n
+                  in  bench (show n) $ nf cycleBases c
+
+b_cycleBase_s ∷ Int → Benchmark
+b_cycleBase_s n = let gs = replicate n strychnine
+                      f  = fmap cycleBases
+                  in  bench (show n) $ nf f gs

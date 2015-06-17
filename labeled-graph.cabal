@@ -65,6 +65,7 @@ library
   other-modules:       Data.Graph.Simple.Util
                        Data.Graph.Simple.Query.Dfs
                        Data.Graph.Simple.Query.Bfs
+                       Data.Graph.Simple.Query.Cycle
 
   build-depends:       base         >= 4.7
                      , containers   >= 0.5.5

@@ -16,7 +16,7 @@ module Data.Graph.Simple.Util (
   ifM, whenM, unlessM
 
 -- * Operations on sorted lists without dublicates
-, unique, sortedUnique, sortedDiff, sortedUnion
+, unique, sortedUnique, sortedDiff, sortedUnion, sortedSymmDiff
 
 -- * Pretty printing
 , rightPad
@@ -27,7 +27,7 @@ module Data.Graph.Simple.Util (
 , unsafeModU, unsafeMod, unsafeModV, unsafeModVU
 
 
-, boolMap
+, boolMap, partMap
 
 , SetM(..), runM, runMV, setM, getM, modM, visit, visited, unvisited, unvisit
 ) where
@@ -36,9 +36,11 @@ import Control.Monad (unless, when)
 import Control.Monad.ST (ST, runST)
 import Data.Graph.Simple.Vertex (Vertex, unVertex)
 import Data.List (sort)
+
+import qualified Data.Vector as V
 import qualified Data.Vector.Mutable as MV
-import qualified Data.Vector.Unboxed.Mutable as MVU
 import qualified Data.Vector.Unboxed as VU
+import qualified Data.Vector.Unboxed.Mutable as MVU
 
 
 -- * Monad utility functions
@@ -96,6 +98,17 @@ sortedUnion = run []
         run r as []                           = reverse r ++ as
         run r as@(a:ta) bs@(b:tb) | a <=  b   = run (a:r) ta bs
                                   | otherwise = run r     as tb
+
+-- | Creates the symmetric set difference of to lists.
+--   Lists are assumed to be set-like: Sorted and
+--   holding each element only once
+sortedSymmDiff ∷ Ord a ⇒ [a] → [a] → [a]
+sortedSymmDiff = run []
+  where run r [] e2                           = reverse r ++ e2
+        run r e1 []                           = run r     [] e1
+        run r as@(a:ta) bs@(b:tb) | a == b    = run r     ta tb
+                                  | a <  b    = run (a:r) ta bs
+                                  | otherwise = run (b:r) as tb
 
 
 
@@ -167,9 +180,19 @@ unsafeWriteVU ∷ MVU.Unbox a ⇒ MVU.MVector s a → Vertex → a → ST s ()
 unsafeWriteVU v i a = MVU.unsafeWrite v (unVertex i) a
 
 
+-- | Returns an efficient mapping from index to 'Bool'.
+--   Indices given as a list of vertices will be mapped to 'True'
+--   all others to 'False'
 boolMap ∷ Int → [Vertex] → VU.Vector Bool
 boolMap n vs = runMV n False $ mapM_ visit vs
 
+-- | Returns an efficient mapping from index to value.
+--   A default value is given together with a list of
+--   index value pairs.
+partMap ∷ Int → a → [(Int,a)] → V.Vector a
+partMap n ini ps = runST $ do v ← MV.replicate n ini
+                              mapM_ (\(i,a) → MV.write v i a) ps
+                              V.unsafeFreeze v
 
 -- Used to mark or count visited vertices in graph algorithms
 newtype SetM s u a = SetM { runSetM ∷ MVU.MVector s u → ST s a }

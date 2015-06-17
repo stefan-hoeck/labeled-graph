@@ -16,11 +16,12 @@ import Data.Graph.Simple.Graph hiding (null)
 import Data.Graph.Simple.Util
 
 
+-- | Breadth first search implementation
 bfs ∷ Graph → [Vertex] → [[Vertex]]
 bfs = runBfs
 
 
-bfPaths ∷ Graph → Vertex → [[Vertex]]
+bfPaths ∷ Graph → [Vertex] → [[[Vertex]]]
 bfPaths = runBfPaths
 
 
@@ -38,11 +39,15 @@ runBfs g vs = filter (not . null) $ runM (order g) False $ runAll vs where
                                     mapM_ visit ns
                                     fmap (v:) (run $ enqueueAll q' ns)
 
-runBfPaths ∷ Graph → Vertex → [[Vertex]]
-runBfPaths g v = runM (order g) False (visit v >> run (singleton [v])) where
-  run q = case dequeue q of
-            Nothing       → return []
-            Just (q', vs) → do ns ← filterM unvisited $ neighbors g (head vs)
-                               mapM_ visit ns
-                               let ns' = fmap (:vs) ns
-                               fmap (vs:) (run $ enqueueAll q' ns')
+
+runBfPaths ∷ Graph → [Vertex] → [[[Vertex]]]
+runBfPaths g vs = runM (order g) False $ run vs
+  where run []    = return []
+        run (v:t) = ifM (visited v) (run t) ((:) <$> runS v <*> run t)
+        runS v    = visit v >> runQ (singleton [v])
+        runQ q = case dequeue q of
+                   Just (q',ps@(v:_)) → do ns   ← filterM unvisited $ neighbors g v
+                                           mapM_ visit ns
+                                           let ps' = fmap (:ps) ns
+                                           fmap (ps' ++) $ runQ (enqueueAll q' ps')
+                   _                  → return []
