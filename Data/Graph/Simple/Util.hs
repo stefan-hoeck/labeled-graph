@@ -29,7 +29,7 @@ module Data.Graph.Simple.Util (
 
 , boolMap
 
-, SetM(..), runM, runMV, setM, getM, modM, visit, visited, unvisit
+, SetM(..), runM, runMV, setM, getM, modM, visit, visited, unvisited, unvisit
 ) where
 
 import Control.Monad (unless, when)
@@ -212,6 +212,10 @@ modM f v = SetM $ \us → unsafeModVU us v f
 {-# INLINE visited #-}
 visited ∷ Vertex → SetM s Bool Bool
 visited = getM
+
+{-# INLINE unvisited #-}
+unvisited ∷ Vertex → SetM s Bool Bool
+unvisited = fmap not . visited
 
 {-# INLINE visit #-}
 visit ∷ Vertex → SetM s Bool ()

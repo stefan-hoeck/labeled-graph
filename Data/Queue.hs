@@ -7,7 +7,7 @@ module Data.Queue (
 
 , empty, singleton, fromList
 
-, toList, enqueue, dequeue
+, toList, enqueue, dequeue, enqueueAll
 ) where
 
 import Control.DeepSeq (NFData)
@@ -30,6 +30,9 @@ toList (Q h t) = h ++ reverse t
 
 enqueue ∷ Queue a → a → Queue a
 enqueue (Q h t) a = Q (a:h) t
+
+enqueueAll ∷ Queue a → [a] → Queue a
+enqueueAll (Q h t) as = Q (as ++ h) t
 
 dequeue ∷ Queue a → Maybe (Queue a, a)
 dequeue (Q [] [])     = Nothing
