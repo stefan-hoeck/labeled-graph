@@ -15,8 +15,8 @@ import Data.Graph.Simple.Util
 import Data.Graph.Simple.Query.Dfs
 import Data.Graph.Simple.Query.Bfs
 import Data.STRef (newSTRef, modifySTRef', readSTRef)
-import Data.Vector ((!))
 
+import qualified Data.Map.Strict as M
 import qualified Data.Vector.Unboxed as VU
 import qualified Data.Vector.Unboxed.Mutable as MVU
 
@@ -150,11 +150,10 @@ cvs g = let o = order g
 -- and returns a cycle base built from the edges missing from this
 -- tree.
 cycleBase' ∷ Graph → [[Vertex]] → [Edges]
-cycleBase' g vss = let pairs = fmap (\vs@(v:_) → (unVertex v, reverse vs)) vss
-                       m     = partMap (order g) [] pairs
-                       keep  = not . null . (m !) . edgeXInt
-                       es    = filterEdges keep $ edges g
-                       cyc e = toCycle e (m ! edgeXInt e) (m ! edgeYInt e)
+cycleBase' g vss = let ps    = fmap (\vs@(v:_) → (v, reverse vs)) vss
+                       m     = M.fromList ps
+                       es    = edgesFromList $ ps >>= edgesAt g . fst
+                       cyc e = toCycle e (m M.! edgeX e) (m M.! edgeY e)
                    in  fmap cyc $ unEdges $ nonSpanningEdges es vss
 
 spanningEdges ∷ [[Vertex]] → Edges
